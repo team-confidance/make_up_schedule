@@ -20,6 +20,7 @@ class _LandingPageState extends State<LandingPage> {
     preferences = await _preference;
     _isLoggedIn = preferences.getInt('isLoggedIn') ?? false;
   }
+
   @override
   void initState(){
     Firebase.initializeApp();
