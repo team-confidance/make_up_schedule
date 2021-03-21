@@ -1,3 +1,4 @@
+import 'package:excel/excel.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,53 +12,96 @@ class RoutineScreen extends StatefulWidget {
 }
 
 class _RoutineScreenState extends State<RoutineScreen> {
-  final mainScheduleDb = FirebaseDatabase.instance.reference().child("MainSchedule");
-  final makeUpScheduleDb = FirebaseDatabase.instance.reference().child("MakeupSchedule");
+  DatabaseReference reference = FirebaseDatabase.instance.reference();
+  DatabaseReference mainScheduleDb;
+  DatabaseReference makeUpScheduleDb;
+  DatabaseReference cancelledScheduleDb;
   List<ScheduleItem> dummyData = [];
 
   @override
   void initState() {
     super.initState();
+    mainScheduleDb = reference.child("MainSchedule");
+    makeUpScheduleDb = reference.child("MakeupSchedule");
+    cancelledScheduleDb = reference.child("CancelledSchedule");
 
     DateTime date = DateTime.now();
     var today = DateFormat('EEEE').format(date);
+    dayName = today;
 
-    mainScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    print("today = $today  selectedDate = $selectedDate");
+    mainScheduleDb.child(today.toUpperCase()).child("AAC").once().then((DataSnapshot snapshot){
       var values = snapshot.value;
       dummyData.clear();
+      print("Values = $values");
 
-      for(var value in values){
-        var item = ScheduleItem();
-        item.courseId = value["courseId"] == null ? "" : value["courseId"];
-        item.endTime = value["endTime"] == null ? "" : value["endTime"];
-        item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
-        item.startTime = value["startTime"] == null ? "" : value["startTime"];
-        item.status = value["status"] == null ? "" : value["status"];
+      if(values != null){
+        /*for(var value in values){
+          var item = ScheduleItem();
+          item.courseId = value["courseId"] == null ? "" : value["courseId"];
+          item.endTime = value["endTime"] == null ? "" : value["endTime"];
+          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
+          item.startTime = value["startTime"] == null ? "" : value["startTime"];
+          item.status = value["status"] == null ? "" : value["status"];
 
-        dummyData.add(item);
+          dummyData.add(item);
+        }*/
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+              roomNo: value['roomNo'].toString(), endTime: value['endTime'].toString(),
+              startTime: value['startTime'].toString(), courseId: value['courseId'].toString(),
+              batchCode: value['batchCode'].toString(), section: value['section'].toString(),
+              teacherCode: value['teacherCode'].toString(), itemKey: key,
+              status: value['status'] ?? " ", courseName: value['courseName'] ?? " ",
+          );
+          dummyData.add(item);
+        });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
       }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
-      });
     });
 
     today = "${date.day}-${date.month}-${date.year}";
     makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
       var values = snapshot.value;
+      print("VALUES2 = $values");
 
-      for(var value in values){
-        var item = ScheduleItem();
-        item.courseId = value["courseId"] == null ? "" : value["courseId"];
-        item.endTime = value["endTime"] == null ? "" : value["endTime"];
-        item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
-        item.startTime = value["startTime"] == null ? "" : value["startTime"];
-        item.status = value["status"] == null ? "" : value["status"];
+      if(values != null){
+        for(var value in values){
+          var item = ScheduleItem();
+          item.courseId = value["courseId"] == null ? "" : value["courseId"].toString();
+          item.endTime = value["endTime"] == null ? "" : value["endTime"].toString();
+          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"].toString();
+          item.startTime = value["startTime"] == null ? "" : value["startTime"].toString();
+          item.status = value["status"] == null ? "" : value["status"].toString();
 
-        dummyData.add(item);
+          dummyData.add(item);
+        }
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
       }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
-      });
+    });
+    cancelledScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+      var values = snapshot.value;
+      print("VALUES3 = $values");
+      if(values != null){
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          var itemKey = value['itemKey'];
+          for(var item in dummyData){
+            if(item.itemKey == itemKey){
+              dummyData.remove(item);
+              break;
+            }
+          }
+        });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
+      }
     });
   }
 
@@ -83,55 +127,107 @@ class _RoutineScreenState extends State<RoutineScreen> {
     if (picked != null && picked != selectedDate)
       setState(() {
         selectedDate = picked;
-        dayName = days[selectedDate.weekday];
-        _resetData(dayName, selectedDate);
+        // dayName = days[selectedDate.weekday];
+        dayName = DateFormat('EEEE').format(selectedDate);
+        resetData(dayName, selectedDate);
       });
   }
+  void isDatasetChanged(bool isChanged){
+    if(isChanged){
+      print("GOING TO resetData() function");
+      resetData(dayName, selectedDate);
+    }
+    else{
+      print("DATASET did not changed");
+    }
+  }
 
-  void _resetData(String today, DateTime selectedDate) {
+  Future<void> resetData(String today, DateTime selectedDate) async{
     dummyData.clear();
-
-    mainScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    print("today = $today  selectedDate = $selectedDate");
+    await mainScheduleDb.child(today.toUpperCase()).child("AAC").once().then((DataSnapshot snapshot){
       var values = snapshot.value;
       dummyData.clear();
+      print("VALUES = $values");
 
-      for(var value in values){
-        var item = ScheduleItem();
-        item.courseId = value["courseId"] == null ? "" : value["courseId"];
-        item.endTime = value["endTime"] == null ? "" : value["endTime"];
-        item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
-        item.startTime = value["startTime"] == null ? "" : value["startTime"];
-        item.status = value["status"] == null ? "" : value["status"];
+      if(values != null){
+        /*for(var value in values){
+          var item = ScheduleItem();
+          item.courseId = value["courseId"] == null ? "" : value["courseId"];
+          item.endTime = value["endTime"] == null ? "" : value["endTime"];
+          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
+          item.startTime = value["startTime"] == null ? "" : value["startTime"];
+          item.status = value["status"] == null ? "" : value["status"];
 
-        dummyData.add(item);
+          dummyData.add(item);
+        }*/
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'], endTime: value['endTime'],
+            startTime: value['startTime'], courseId: value['courseId'],
+            batchCode: value['batchCode'], section: value['section'],
+            teacherCode: value['teacherCode'], itemKey: key,
+            status: value['status'] ?? " ", courseName: value['courseName'] ?? " ",
+          );
+          dummyData.add(item);
+        });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
       }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
-      });
     });
 
     today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
-    makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    await makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
       var values = snapshot.value;
+      print("VALUES2 = $values");
 
-      for(var value in values){
-        var item = ScheduleItem();
-        item.courseId = value["courseId"] == null ? "" : value["courseId"];
-        item.endTime = value["endTime"] == null ? "" : value["endTime"];
-        item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
-        item.startTime = value["startTime"] == null ? "" : value["startTime"];
-        item.status = value["status"] == null ? "" : value["status"];
+      if(values != null){
+        for(var value in values){
+          var item = ScheduleItem();
+          item.courseId = value["courseId"] == null ? "" : value["courseId"];
+          item.endTime = value["endTime"] == null ? "" : value["endTime"];
+          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
+          item.startTime = value["startTime"] == null ? "" : value["startTime"];
+          item.status = value["status"] == null ? "" : value["status"];
 
-        dummyData.add(item);
+          dummyData.add(item);
+        }
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
       }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
-      });
+    });
+    cancelledScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+      var values = snapshot.value;
+      print("VALUES3 = $values");
+      if(values != null){
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          var itemKey = value['itemKey'];
+          var item;
+          bool flag = false;
+          for(item in dummyData){
+            if(item.itemKey == itemKey){
+              flag = true;
+              break;
+            }
+          }
+          if(flag){
+            dummyData.remove(item);
+          }
+        });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    var date = DateTime.now();
     var _width = MediaQuery.of(context).size.width;
     var _height = MediaQuery.of(context).size.height;
     return Scaffold(
@@ -151,7 +247,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                 width: _width,
                 child: Center(
                   child: Text(
-                    "${days[selectedDate.weekday]} ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                    "${dayName} ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
                     style: TextStyle(fontSize: 30),
                   ),
                 ),
@@ -172,7 +268,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
               GestureDetector(
                 onTap: (){
                   Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => AvailableScreen()));
+                      builder: (context) => AvailableScreen(day: dayName, date: selectedDate,)));
                 },
                 child: Container(
                   margin: EdgeInsets.only(right: 10),
@@ -184,11 +280,11 @@ class _RoutineScreenState extends State<RoutineScreen> {
             ],
           ),
           Expanded(
-            child: ListView.builder(
+            child: dummyData.length ==0 ? Text("NO ITEM") : ListView.builder(
               itemCount: dummyData.length,
               itemBuilder: (context, i) => Container(
                 margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: ItemTile(dummyData[i]),
+                child: ItemTile(dummyData: dummyData[i], date: "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}", datasetChanged: isDatasetChanged,),
               ),
             ),
           ),

@@ -1,16 +1,24 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/model/available_item.dart';
 import 'package:make_up_class_schedule/utils/constraints.dart';
 
-class AvailableItemTile extends StatelessWidget {
+class AvailableItemTile extends StatefulWidget {
   final AvailableItem dummyData;
+  final String date;
+  Function datasetChanged;
 
-  AvailableItemTile(this.dummyData);
+  AvailableItemTile({this.dummyData, this.date, this.datasetChanged});
 
   @override
+  _AvailableItemTileState createState() => _AvailableItemTileState();
+}
+
+class _AvailableItemTileState extends State<AvailableItemTile> {
+  @override
   Widget build(BuildContext context) {
-    print("AVAILABLE ITEM TILE: dummyData = $dummyData");
+    print("AVAILABLE ITEM TILE: dummyData = ${widget.dummyData}");
     return Container(
       padding: EdgeInsets.fromLTRB(10,10,0,10),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: Colors.white),
@@ -20,17 +28,17 @@ class AvailableItemTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Room - " + dummyData.roomNo.toString(), style: TextStyle(fontSize: 20)),
+              Text(" "+ widget.dummyData.roomNo.toString(), style: TextStyle(fontSize: 20)),
               SizedBox(height: 10),
               Row(
                 children: [
                   Icon(Icons.access_time_rounded, color: Color(0xFFA6BECB),size: 14,),
-                  Text(" " + dummyData.startTime.toString() + " - " + dummyData.endTime.toString()+"    ",style: TextStyle(color: Colors.grey)),
+                  Text(" " + convertString(widget.dummyData.startTime) + " - " + convertString(widget.dummyData.endTime) +"    ",style: TextStyle(color: Colors.grey)),
                   Icon(Icons.stacked_bar_chart, color: Color(0xFFA6BECB),size: 14,),
                   Text(
-                    " "+dummyData.status.toString(),
+                    " "+widget.dummyData.status.toString(),
                     style: TextStyle(
-                        color: statusColorOf(dummyData.status),
+                        color: statusColorOf(widget.dummyData.status),
                         fontWeight: FontWeight.bold),
                   )
                 ],
@@ -40,18 +48,30 @@ class AvailableItemTile extends StatelessWidget {
           Row(
             children: [
               PopupMenuButton(
-                onSelected: (value) {
+                onSelected: (value) async {
                   toast(context, "Clicked on $value");
+                  if(value == 1){
+                    var itemKey = widget.dummyData.itemKey;
+                    var result = await bookClass(itemKey, widget.date);
+                    if(result == null){
+                      setState(() {
+                        widget.datasetChanged(true);
+                      });
+                    }
+                    else{
+                      print(result);
+                    }
+                  }
                 },
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 1,
-                    child: Text('Cancel Class'),
+                    child: Text('Book Class'),
                   ),
-                  PopupMenuItem(
+                  /*PopupMenuItem(
                     value: 2,
                     child: Text('Change Title'),
-                  ),
+                  ),*/
                 ],
               ),
             ],
@@ -66,5 +86,55 @@ class AvailableItemTile extends StatelessWidget {
       return Colors.red;
     else if (status == "Available")
       return Colors.greenAccent[400];
+  }
+
+  String convertString(String time){
+    int totalTime = int.parse(time);
+    int hour = 0, minute = 0;
+    String amOrPm = "AM";
+    if(totalTime>=720){
+      hour = 12;
+      totalTime -= 720;
+      amOrPm = "PM";
+    }
+    hour += totalTime.toDouble()~/60;
+    if(hour>=13) {
+      hour-=12;
+    }
+    minute = totalTime % 60;
+    String strHour = hour.toString(), strMinute = minute.toString();
+    if(strHour.length == 1){
+      strHour = "0$strHour";
+    }
+    if(strMinute.length == 1){
+      strMinute = "0$strMinute";
+    }
+    String retString = "$strHour : $strMinute $amOrPm";
+    return retString;
+  }
+  Future<String> bookClass(String itemKey, String date) async {
+    try{
+      DatabaseReference reference = await FirebaseDatabase.instance.reference();
+      await reference.child("BookedRooms").child(date).push().set({
+        "itemKey" : itemKey,
+        "startTime" : widget.dummyData.startTime,
+        "endTime" : widget.dummyData.endTime,
+        "roomNo" : widget.dummyData.roomNo,
+      });
+      print("SUCCESSFULLY added in CANCELLED!!");
+      await reference.child("MakeupSchedule").child(date).child("AAC").push().set(
+          {
+            "roomNo" : widget.dummyData.roomNo,
+            "startTime" : widget.dummyData.startTime,
+            "endTime" : widget.dummyData.endTime,
+          }
+      );
+      print("SUCCESSFULLY added in AVAILABLE by DATE!!");
+      return null;
+    }
+    catch (e){
+      print("ERROR OCCURED in cancelling data!!");
+      return "ERROR OCCURED in cancelling data!!";
+    }
   }
 }

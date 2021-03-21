@@ -1,14 +1,17 @@
 class ScheduleItem {
   var courseId = "CSE-2311";
-  var courseName = "CSE-2311";
+  var courseName = "Data Structure";
   var section = "9D";
   var startTime = "09:00AM";
   var endTime = "12:00PM";
-  var status = "CSE-2311";
+  var status = "Upcoming";
   var roomNo = "123";
+  var batchCode = "44";
+  var teacherCode = "AAD";
+  var itemKey = "";
 
   ScheduleItem(
-      {this.courseId, this.courseName, this.startTime, this.endTime, this.status, this.roomNo});
+      {this.itemKey, this.teacherCode, this.section,this.batchCode, this.courseId, this.courseName, this.startTime, this.endTime, this.status, this.roomNo});
 
   ScheduleItem.fromJson(Map<dynamic, dynamic> json)
       : courseId = json['courseId'],
@@ -16,7 +19,11 @@ class ScheduleItem {
         startTime = json['startTime'],
         endTime = json['endTime'],
         status = json['status'],
-        roomNo = json['roomNo'];
+        batchCode = json['batchCode'],
+        roomNo = json['roomNo'],
+        section = json['section'],
+        teacherCode = json['teacherCode'],
+        itemKey = json['itemKey'];
 }
 
 

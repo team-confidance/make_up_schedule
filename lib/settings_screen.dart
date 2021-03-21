@@ -1,12 +1,16 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:make_up_class_schedule/create_new_user_screen.dart';
 import 'package:make_up_class_schedule/edit_password.dart';
 import 'package:make_up_class_schedule/edit_phone_number.dart';
+import 'package:make_up_class_schedule/model/dummy_class_rooms.dart';
 
 class SettingsScreen extends StatefulWidget {
   @override
@@ -14,8 +18,29 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+
+  void _showToast(String mText){
+    Fluttertoast.showToast(
+        msg: mText,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.blueAccent,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
+  }
   String _fileName = "";
   bool _isFilePicked = false;
+  DatabaseReference dbReference;
+  Future<String> getDbReference() async{
+    try{
+      dbReference = await FirebaseDatabase.instance.reference();
+      return null;
+    }catch(e){
+      print("GetDbRef EXCEPTION : e= $e");
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,6 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         var mPath = file.path;
                         var bytes = File(mPath).readAsBytesSync();
                         var excel = Excel.decodeBytes(bytes);
+                        _uploadTableToFirebase(excel);
 
                         for (var table in excel.tables.keys) {
                           print("TABLE = $table"); //sheet Name
@@ -199,4 +225,206 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+
+  Future<bool> _uploadTableToFirebase(Excel excel) async {
+    bool isSuccessFul = true;
+    for (var table in excel.tables.keys) {
+      print("TABLE = $table"); //sheet Name
+      print("Max COL = " + excel.tables[table].maxCols.toString());
+      print("MAX ROW = " + excel.tables[table].maxRows.toString());
+      List<String> header = new List.filled(excel.tables[table].maxRows, "");
+      Map<int, TimePair> times = {};
+      var latestDay = "";
+      bool alreadyTakenDetails = false;
+      Map<Pair, bool> roomUsedDetails = {};
+      var maxColHasClass = 0;
+      // Map<String, List<String>> roomUsedDetails = {};
+      for (var row in excel.tables[table].rows) {
+        print("...............ROW = $row");
+        print("ROW.type = ${row.runtimeType}   ROW.size = ${row.length}");
+        var rowLength = row.length;
+        var beforeLatestDay;
+
+        if(row[0] != null){
+          beforeLatestDay = latestDay;
+          latestDay = row[0];
+          print("latestDay === ${row[0]}");
+          if(alreadyTakenDetails == false){
+            alreadyTakenDetails = true;
+            for(int i=1; i<rowLength; i++){
+              if(row[i]!=null){
+                String myString = row[i].toString();
+                print("i=$i, myString = $myString, row[i] = ${row[i]}");
+                String withoutEquals = myString.replaceAll(RegExp(' '), '');
+                print("i=$i, withoutEquals = $withoutEquals");
+
+
+                var splitResult = withoutEquals.split('-');
+                if(splitResult.length > 1){
+                  //given a time range
+                  var againSplit = splitResult[0].split(":");
+                  var hourToMinute = int.parse(againSplit[0])*60;
+                  var onlyMinutes = int.parse(againSplit[1]);
+                  var startTime = hourToMinute + onlyMinutes;
+
+                  againSplit = splitResult[1].split(":");
+                  var lastTwoChar = againSplit[1].substring(againSplit[1].length-2,againSplit[1].length);
+                  againSplit[1] = againSplit[1].substring(0, againSplit[1].length-2);
+                  hourToMinute = int.parse(againSplit[0])*60;
+                  onlyMinutes = int.parse(againSplit[1]);
+                  var endTime = hourToMinute + onlyMinutes;
+
+                  if(lastTwoChar == "PM" || lastTwoChar == "pm"){
+                    if(startTime<endTime){
+                      startTime += 720;
+                    }
+                    endTime+=720;
+                  }
+                  times[i] = TimePair(startTime, endTime);
+                  header[i] = "timeRange";
+                }
+                else{
+                  header[i] = withoutEquals;
+                }
+              }
+            }
+          }
+          else{
+            print("INTO THE ELSE........maxColHasClass = $maxColHasClass");
+            for(int i=3; i<=maxColHasClass; i++){
+              if(header[i] != "timeRange"){
+                continue;
+              }
+              for(var roomNo in roomList){
+                print("i=$i roomNo = $roomNo  times[i].fromTime = ${times[i].fromTime}");
+                Pair pairElement = Pair(roomNo, times[i].fromTime);
+                print("pairElement = $pairElement");
+                if(roomUsedDetails[pairElement] == null){
+                  roomUsedDetails[pairElement] = false;
+                }
+                if(roomUsedDetails[pairElement] == false){
+                  try{
+                    await dbReference.child("AvailableRoomsByDay").child(beforeLatestDay).push().set({
+                      "roomNo" : roomNo,
+                      "startTime" : times[i].fromTime,
+                      "endTime" : times[i].toTime,
+                    });
+                    _showToast("Routine uploaded successfully!");
+                    print("ROUTINE UPLOADED!");
+                  }
+                  catch(e){
+                    print("ROUTINE UPLOAD FAILED!  E = $e");
+                    _showToast("Routine Upload Failed");
+                    isSuccessFul = false;
+                  }
+                }
+              }
+            }
+            print("LOOP FINISHED!!!!!!!");
+            print("starting new loop!!!");
+            for(var i=3; i<rowLength; i++) {
+              if(header[i] != "timeRange"){
+                continue;
+              }
+              for (var roomNo in roomList) {
+                roomUsedDetails[Pair(roomNo, times[i].fromTime)] = false;
+              }
+            }
+          }
+        }
+        else{
+          for(var i=3; i<rowLength; i++){
+            if(row[i]!=null){
+              String myString = row[i].toString();
+              print("myString = $myString");
+              var splitResult = myString.split(',');
+              print("SPLIT RESULT = $splitResult");
+              if(splitResult.length == 3){
+                maxColHasClass = max(maxColHasClass, i);
+                var courseCode = splitResult[0];
+                print("courseCode = $courseCode");
+                var teacherCode = splitResult[1];
+                print("teacherCode = $teacherCode");
+                var roomNo = splitResult[2];
+                print("roomNo = $roomNo");
+                var sectionCode = row[1];
+                var batchCode = row[2];
+
+                await getDbReference();
+                //upload to mainDb
+                try{
+                  await dbReference.child("MainSchedule").child(latestDay).child(teacherCode).push().set({
+                    "courseId" : courseCode,
+                    "teacherCode" : teacherCode,
+                    "roomNo" : roomNo,
+                    "section" : sectionCode,
+                    "batchCode" : batchCode,
+                    "startTime" : times[i].fromTime.toString(),
+                    "endTime" : times[i].toTime.toString(),
+                  });
+                  roomUsedDetails[Pair(roomNo, times[i].fromTime)] = true;
+                  _showToast("Routine uploaded successfully!");
+                  print("ROUTINE UPLOADED!");
+                }
+                catch(e){
+                  print("ROUTINE UPLOAD FAILED!");
+                  _showToast("Routine Upload Failed");
+                  isSuccessFul = false;
+                }
+              }
+            }
+          }
+        }
+      }
+      for(int i=3; i<=maxColHasClass; i++){
+        if(header[i] != "timeRange"){
+          continue;
+        }
+        for(var roomNo in roomList){
+          print("i=$i roomNo = $roomNo  times[i].fromTime = ${times[i].fromTime}");
+          Pair pairElement = Pair(roomNo, times[i].fromTime);
+          print("pairElement = $pairElement");
+          if(roomUsedDetails[pairElement] == null){
+            roomUsedDetails[pairElement] = false;
+          }
+          if(roomUsedDetails[pairElement] == false){
+            try{
+              await dbReference.child("AvailableRoomsByDay").child(latestDay).push().set({
+                "roomNo" : roomNo,
+                "startTime" : times[i].fromTime,
+                "endTime" : times[i].toTime,
+              });
+              _showToast("Routine uploaded successfully!");
+              print("ROUTINE UPLOADED!");
+            }
+            catch(e){
+              print("ROUTINE UPLOAD FAILED!  E = $e");
+              _showToast("Routine Upload Failed");
+              isSuccessFul = false;
+            }
+          }
+        }
+      }
+      print("LOOP FINISHED!!!!!!!");
+    }
+    return isSuccessFul;
+  }
+}
+
+class TimePair {
+  TimePair(this.fromTime, this.toTime);
+  final dynamic fromTime;
+  final dynamic toTime;
+
+  @override
+  String toString() => 'TimePair[$fromTime, $toTime]';
+}
+class Pair {
+  Pair(this.first, this.second);
+  final dynamic first;
+  final dynamic second;
+
+  @override
+  String toString() => 'Pair[$first, $second]';
 }

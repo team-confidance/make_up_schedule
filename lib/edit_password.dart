@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:make_up_class_schedule/auth_screen.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EditPassword extends StatefulWidget {
   @override
@@ -15,10 +18,22 @@ class _EditPasswordState extends State<EditPassword> {
         appBar: AppBar(
           //title: Text(""),
           actions: <Widget>[
-            IconButton(icon: Icon(Icons.logout), onPressed: () {
-              FirebaseAuth.instance.signOut();
-              Navigator.pushNamedAndRemoveUntil(context, "/login_screen", (r) => false);
-            })
+            IconButton(
+              icon: Icon(Icons.logout),
+              onPressed: () async {
+                var sharedPref = await SharedPreferences.getInstance();
+                sharedPref.setBool(Constants.isLoggedIn, false);
+                /*Navigator.pushNamedAndRemoveUntil(
+                    context, "/login_screen", (r) => false);*/
+                Navigator.pushAndRemoveUntil<dynamic>(
+                  context,
+                  MaterialPageRoute<dynamic>(
+                    builder: (BuildContext context) => AuthScreen(),
+                  ),
+                      (route) => false,//if you want to disable back feature set to false
+                );
+              },
+            ),
           ],
         ),
         body: Container(

@@ -1,9 +1,9 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:make_up_class_schedule/main_screen.dart';
 import 'package:make_up_class_schedule/model/login_info.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginFragment extends StatefulWidget {
   @override
@@ -12,6 +12,7 @@ class LoginFragment extends StatefulWidget {
 
 class _LoginFragmentState extends State<LoginFragment> {
   // var _goToMain = false;
+  final Future<SharedPreferences> _preference = SharedPreferences.getInstance();
 
   Future<void> _alertDialogBuilder(String error) async {
     return showDialog(
@@ -36,6 +37,8 @@ class _LoginFragmentState extends State<LoginFragment> {
     );
   }
 
+
+  List<LoginInfo> infoList = [];
   Future<String> _loginAccount() async{
     // eroTIrHN
     try{
@@ -43,9 +46,11 @@ class _LoginFragmentState extends State<LoginFragment> {
       Map<dynamic,dynamic> userData = snapshot.value;
       print("CHEKING ALREADY EXISTING USER: userExist = $userData");
       if(userData != null){
-        List<LoginInfo> infoList = [];
+        infoList.clear();
         userData.forEach((key, value) {
-          infoList.add(value);
+          LoginInfo mValue = LoginInfo(email : value['email'], password: value['password'], name: value['name'], designation: value['designation'], phone: value['phone'], photoUrl: value['photoUrl']);
+          mValue.firebaseKey = key;
+          infoList.add(mValue);
         });
         if(infoList[0].email == _loginEmail && infoList[0].password == _loginPassword){
           print("OKAY!! email and password matched: RETURNING NULL!!");
@@ -81,9 +86,28 @@ class _LoginFragmentState extends State<LoginFragment> {
       });
     }
     else{
-      Navigator.pushNamedAndRemoveUntil(context, "/main_screen", (r) => false);
-      /*Navigator.pop(context);  // pop current page
-      Navigator.pushNamed(context, "/main");*/
+      var preference = await _preference;
+      await preference.setBool(Constants.isLoggedIn, true);
+      await preference.setString(Constants.emailAddress, _loginEmail);
+      await preference.setString(Constants.name, infoList[0].name?? "Dummy Name");
+      await preference.setString(Constants.designation, infoList[0].designation?? "Dummy Designation");
+      await preference.setString(Constants.phone, infoList[0].phone?? "01XXXXXXXXX");
+      await preference.setString(Constants.photoUrl, infoList[0].photoUrl?? "");
+      await preference.setString(Constants.firebaseKey, infoList[0].firebaseKey);
+      //Navigator.pushNamedAndRemoveUntil(context, "/main_screen", (Route<dynamic> route) => false);
+      // eroTIrHN
+      /*Navigator.of(context).pushNamedAndRemoveUntil(
+          '/main_screen', (Route<dynamic> route) => false);*/
+      Navigator.pushAndRemoveUntil<dynamic>(
+        context,
+        MaterialPageRoute<dynamic>(
+          builder: (BuildContext context) => MainScreen(),
+        ),
+            (route) => false,//if you want to disable back feature set to false
+      );
+      //Navigator.pop(context);  // pop current page
+
+      /*Navigator.pushNamed(context, "/main");*/
     }
   }
 
@@ -91,6 +115,10 @@ class _LoginFragmentState extends State<LoginFragment> {
   String _loginEmail = "";
   String _loginPassword = "";
   FocusNode _passwordFocusNode;
+  String _name = "";
+  String _designation = "";
+  String _phone = "";
+  String _photoUrl = "";
 
   @override
   void initState() {

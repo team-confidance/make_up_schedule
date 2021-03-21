@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth_screen.dart';
 
@@ -16,13 +18,7 @@ class _EditPhoneNumberState extends State<EditPhoneNumber> {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          //title: Text(""),
-          actions: <Widget>[
-            IconButton(icon: Icon(Icons.logout), onPressed: () {
-              FirebaseAuth.instance.signOut();
-              Navigator.pushNamedAndRemoveUntil(context, "/login_screen", (r) => false);
-            })
-          ],
+          title: Text("Create"),
         ),
         body: Container(
           margin: EdgeInsets.symmetric(horizontal: 20),

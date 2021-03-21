@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final mainScheduleDb = FirebaseDatabase.instance.reference().child("MainSchedule");
   final makeUpScheduleDb = FirebaseDatabase.instance.reference().child("MakeupSchedule");
   List<ScheduleItem> dummyData = [];
+  var dayName, dateName;
 
   @override
   void initState() {
@@ -27,23 +26,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     DateTime date = DateTime.now();
     var today = DateFormat('EEEE').format(date);
+    dayName = today;
 
-    mainScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
-      // var data = snapshot.value;
+    mainScheduleDb.child(today.toUpperCase()).child("AAC").once().then((DataSnapshot snapshot){
       var values = snapshot.value;
       // var keys = snapshot.value.keys;
       dummyData.clear();
       print("VALUES...... = .....$values");
-      print("value.length = ${values.length}");
+      // print("value.length = ${values.length}");
       print("value type = ${values.runtimeType}");
       /*print("KEYS...... = .....$keys");
       print("VALUES...... = .....$values");*/
 
-      for(var value in values){
-        print("value = $value");
-        print("value[courseId] = ${value["courseId"]}");
-        print("value type = ${value.runtimeType}");
-        print("value[courseId] type = ${value["courseId"].runtimeType}");
+
         // print("value = ${value.courseId}");
 
         // Map itemMap = jsonDecode(value);
@@ -53,12 +48,12 @@ class _HomeScreenState extends State<HomeScreen> {
         // print("ITEM BEFORE = $item");
 
 
-        var item = ScheduleItem();
+        /*var item = ScheduleItem();
         item.courseId = value["courseId"] == null ? "" : value["courseId"];
         item.endTime = value["endTime"] == null ? "" : value["endTime"];
         item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
         item.startTime = value["startTime"] == null ? "" : value["startTime"];
-        item.status = value["status"] == null ? "" : value["status"];
+        item.status = value["status"] == null ? "" : value["status"];*/
 
 
 
@@ -68,9 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
         item.startTime = value.startTime == null ? "" : value.startTime;
         item.status = value.status == null ? "" : value.status;
         print("ITEM = $item");*/
-        dummyData.add(item);
+      /*  dummyData.add(item);
       }
-      print(".............................FINISHED LOOOP!!!");
+      print(".............................FINISHED LOOOP!!!");*/
       /*try{
       data.forEach((key, value){
         // if(value != null && key != null){
@@ -93,17 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
       catch(e){
         print("EXCEPTION ===  $e");
       }*/
-      setState(() {
-      });
-    });
+    /*for(var value in values){
+      print("value = $value");
+      print("value[courseId] = ${value["courseId"]}");
+      print("value type = ${value.runtimeType}");
+      print("value[courseId] type = ${value["courseId"].runtimeType}");*/
 
-    today = "${date.day}-${date.month}-${date.year}";
-    print("TODAY: $today");
-    makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
-      var values = snapshot.value;
-      print("VALUES = $values");
-
-      for(var value in values){
+      if(values != null){
+        /*for(var value in values){
         var item = ScheduleItem();
         item.courseId = value["courseId"] == null ? "" : value["courseId"];
         item.endTime = value["endTime"] == null ? "" : value["endTime"];
@@ -112,15 +104,51 @@ class _HomeScreenState extends State<HomeScreen> {
         item.status = value["status"] == null ? "" : value["status"];
 
         dummyData.add(item);
+      }*/
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'], endTime: value['endTime'].toString(),
+            startTime: value['startTime'], courseId: value['courseId'].toString(),
+            batchCode: value['batchCode'], section: value['section'].toString(),
+            teacherCode: value['teacherCode'], itemKey: key,
+            status: value['status'] ?? " ", courseName: value['courseName'] ?? " ",
+          );
+          dummyData.add(item);
+        });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
       }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
-      });
+    });
+
+    today = "${date.day}-${date.month}-${date.year}";
+    dateName = today;
+    print("TODAY: $today");
+    makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+      var values = snapshot.value;
+      print("VALUES = $values");
+
+      if(values != null){
+        for(var value in values){
+          var item = ScheduleItem();
+          item.courseId = value["courseId"] == null ? "" : value["courseId"];
+          item.endTime = value["endTime"] == null ? "" : value["endTime"];
+          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
+          item.startTime = value["startTime"] == null ? "" : value["startTime"];
+          item.status = value["status"] == null ? "" : value["status"];
+          dummyData.add(item);
+       }
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    var date = DateTime.now();
     var _width = MediaQuery.of(context).size.width;
     var _height = MediaQuery.of(context).size.height;
     return Scaffold(
@@ -149,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   GestureDetector(
                     onTap: (){
                       Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => AvailableScreen()));
+                          builder: (context) => AvailableScreen(date: DateTime.now(), day: dayName,)));
                     },
                     child: Container(
                       margin: EdgeInsets.only(right: 10),
@@ -166,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: dummyData.length,
                   itemBuilder: (context, i) => Container(
                     margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: ItemTile(dummyData[i]),
+                    child: ItemTile(dummyData: dummyData[i], date: "${date.day}-${date.month}-${date.year}",),
                   ),
                 ),
               ),

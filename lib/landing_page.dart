@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/auth_screen.dart';
 import 'package:make_up_class_schedule/main_screen.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LandingPage extends StatefulWidget {
@@ -18,12 +19,11 @@ class _LandingPageState extends State<LandingPage> {
 
   void _getPreference() async{
     preferences = await _preference;
-    _isLoggedIn = preferences.getInt('isLoggedIn') ?? false;
+    _isLoggedIn = preferences.getBool(Constants.isLoggedIn) ?? false;
   }
 
   @override
   void initState(){
-    Firebase.initializeApp();
     _getPreference();
     super.initState();
   }

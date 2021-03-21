@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:make_up_class_schedule/auth_screen.dart';
 import 'package:make_up_class_schedule/home_screen.dart';
 import 'package:make_up_class_schedule/notification_screen.dart';
 import 'package:make_up_class_schedule/routine_screen.dart';
 import 'package:make_up_class_schedule/settings_screen.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -11,22 +13,26 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex=0;
-  String s="Home";
-  var titles=["Home","Routine","Settings"];
-  final tabs= [
+  int _currentIndex = 0;
+  String s = "Home";
+  var titles = ["Home", "Routine", "Settings"];
+  final tabs = [
     HomeScreen(),
     RoutineScreen(),
     SettingsScreen(),
   ];
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    var selColor = Color(0xFFFEACB6);
+    var deselColor = Color(0xFFE4ECF1);
 
-    var selColor=Color(0xFFFEACB6);
-    var deselColor=Color(0xFFE4ECF1);
-
-    return  Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(s),
         centerTitle: true,
@@ -39,18 +45,26 @@ class _MainScreenState extends State<MainScreen> {
                     builder: (context) => NotificationScreen()));
               }),
           IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: () {
-                FirebaseAuth.instance.signOut();
-                Navigator.pushNamedAndRemoveUntil(context, "/login_screen", (r) => false);
-              })
-            ],
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              var sharedPref = await SharedPreferences.getInstance();
+              sharedPref.setBool(Constants.isLoggedIn, false);
+              Navigator.pushAndRemoveUntil<dynamic>(
+                context,
+                MaterialPageRoute<dynamic>(
+                  builder: (BuildContext context) => AuthScreen(),
+                ),
+                    (route) => false,//if you want to disable back feature set to false
+              );
+            },
           ),
-          body: PageStorage(
-            child: tabs[_currentIndex],
-            bucket: PageStorageBucket(),
-          ),
-          /*body: tabs[_currentIndex],*/
+        ],
+      ),
+      body: PageStorage(
+        child: tabs[_currentIndex],
+        bucket: PageStorageBucket(),
+      ),
+      /*body: tabs[_currentIndex],*/
       floatingActionButton: FloatingActionButton(
         child: Icon(
           Icons.ballot,
@@ -106,7 +120,7 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 ),
 
-                  // Right Tab bar icons
+                // Right Tab bar icons
 
                 Row(
                   // crossAxisAlignment: CrossAxisAlignment.start,

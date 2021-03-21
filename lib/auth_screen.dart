@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:make_up_class_schedule/login_fragment.dart';
@@ -16,16 +17,10 @@ class _AuthScreenState extends State<AuthScreen> {
   final tabs=[LoginFragment(), SignupFragment()];
   static var pos=0;
   
-  /*@override
+  @override
   void initState() {
-    // TODO: implement initState
     super.initState();
   }
-  final changePos = () => {
-    setState(() {
-      pos = 0;
-    });
-  }*/
 
   @override
   Widget build(BuildContext context) {

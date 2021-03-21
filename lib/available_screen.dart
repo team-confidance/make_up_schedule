@@ -5,87 +5,80 @@ import 'package:make_up_class_schedule/model/available_item.dart';
 import 'package:make_up_class_schedule/model/available_item_tile.dart';
 
 class AvailableScreen extends StatefulWidget {
+  final String day;
+  final DateTime date;
+  AvailableScreen({this.date, this.day});
   @override
   _AvailableScreenState createState() => _AvailableScreenState();
 }
 
 class _AvailableScreenState extends State<AvailableScreen> {
-  final availableRoomDb = FirebaseDatabase.instance.reference().child("AvailableRooms");
-  final bookedRoomsDb = FirebaseDatabase.instance.reference().child("BookedRooms");
+  DatabaseReference reference = FirebaseDatabase.instance.reference();
+  DatabaseReference availableRoomsByDayDb;
+  DatabaseReference availableRoomsByDateDb;
   List<AvailableItem> dummyData = [];
 
   @override
   void initState() {
     super.initState();
+    availableRoomsByDayDb = reference.child("AvailableRoomsByDay");
+    availableRoomsByDateDb = reference.child("AvailableRoomsByDate");
 
-    DateTime date = DateTime.now();
-    var today = DateFormat('EEEE').format(date);
+    var today = widget.day;
+    dayName = widget.day;
+    selectedDate = widget.date;
 
-    try{
-      availableRoomDb.child(today).once().then((DataSnapshot snapshot){
+    try {
+      availableRoomsByDayDb.child(today.toUpperCase()).once().then((DataSnapshot snapshot) {
         var values = snapshot.value;
         print("AVAILABLE values = ${values}");
         dummyData.clear();
 
-        try{
-          var length = values.length;
-          print("LENGTH = $length");
-          for(var i=0; i<length; i++){
-            var item = AvailableItem();
-            item.endTime = values[i]["endTime"] == null ? "" : values[i]["endTime"];
-            item.roomNo = values[i]["roomNo"] == null ? "" : values[i]["roomNo"];
-            item.startTime = values[i]["startTime"] == null ? "" : values[i]["startTime"];
-            item.status = values[i]["status"] == null ? "" : values[i]["status"];
-
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            AvailableItem item = AvailableItem(
+              roomNo: value['roomNo'].toString(),
+              startTime: value['startTime'].toString(),
+              endTime: value['endTime'].toString(),
+              itemKey: value['itemKey'].toString(),
+              status: value['status'] ?? " ",
+            );
             dummyData.add(item);
-          }
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
         }
-        catch(e){
-          print("AVAILABLE CLASSES INNER ERROR1 = $e");
-        }
-        print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
       });
-    }
-    catch(e){
-      print("AVAILABLE CLASSES: OUTSIDE ERROR1 = $e");
-    }
 
-    today = "${date.day}-${date.month}-${date.year}";
-    try{
-      bookedRoomsDb.child(today).once().then((DataSnapshot snapshot){
+      today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";;
+      availableRoomsByDateDb.child(today).once().then((DataSnapshot snapshot) {
         var values = snapshot.value;
-        print("BOOKED values = $values");
+        print("AVAILABLE values = ${values}");
 
-        try{
-          var length = values.length;
-          print("LENGTH = $length");
-          for(var i=0; i<length; i++){
-            var item = AvailableItem();
-            item.endTime = values[i]["endTime"] == null ? "" : values[i]["endTime"];
-            item.roomNo = values[i]["roomNo"] == null ? "" : values[i]["roomNo"];
-            item.startTime = values[i]["startTime"] == null ? "" : values[i]["startTime"];
-            item.status = values[i]["status"] == null ? "" : values[i]["status"];
-
-            dummyData.remove(item);
-          }
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            AvailableItem item = AvailableItem(
+              roomNo: value['roomNo'].toString(),
+              startTime: value['startTime'].toString(),
+              endTime: value['endTime'].toString(),
+              itemKey: value['itemKey'].toString(),
+              status: value['status'] ?? " ",
+            );
+            dummyData.add(item);
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
         }
-        catch(e){
-          print("AVAILABLE CLASSES INNER ERROR2 = $e");
-        }
-
-        print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
       });
     }
-    catch(e){
-      print("AVAILABLE CLASSES OUTSIDE ERROR2 = $e");
+    catch (e) {
+      print("ERROR EXCEPTION : e=$e");
     }
   }
 
-  DateTime selectedDate = DateTime.now();
+  DateTime selectedDate;
   var days = [
     "Sunday",
     "Monday",
@@ -95,7 +88,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
     "Friday",
     "Saturday"
   ];
-  var dayName = "";
+  var dayName = " ";
 
   Future<Null> _selectDate(BuildContext context) async {
     final DateTime picked = await showDatePicker(
@@ -107,53 +100,71 @@ class _AvailableScreenState extends State<AvailableScreen> {
     if (picked != null && picked != selectedDate)
       setState(() {
         selectedDate = picked;
-        dayName = days[selectedDate.weekday];
+        // dayName = days[selectedDate.weekday];
         _resetData(dayName, selectedDate);
       });
   }
 
+  void isDatasetChanged(bool isChanged){
+    if(isChanged){
+      print("GOING TO resetData() function");
+      _resetData(dayName, selectedDate);
+    }
+    else{
+      print("DATASET did not changed");
+    }
+  }
+
   void _resetData(String today, DateTime selectedDate) {
     dummyData.clear();
+    try {
+      availableRoomsByDayDb.child(today.toUpperCase()).once().then((DataSnapshot snapshot) {
+        var values = snapshot.value;
+        print("AVAILABLE values = ${values}");
+        dummyData.clear();
 
-    availableRoomDb.child(today).once().then((DataSnapshot snapshot){
-      var values = snapshot.value;
-      dummyData.clear();
-
-      var length = values.length;
-      print("LENGTH = $length");
-      for(var i=0; i<length; i++){
-        var item = AvailableItem();
-        item.endTime = values[i]["endTime"] == null ? "" : values[i]["endTime"];
-        item.roomNo = values[i]["roomNo"] == null ? "" : values[i]["roomNo"];
-        item.startTime = values[i]["startTime"] == null ? "" : values[i]["startTime"];
-        item.status = values[i]["status"] == null ? "" : values[i]["status"];
-
-        dummyData.add(item);
-      }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            AvailableItem item = AvailableItem(
+              roomNo: value['roomNo'].toString(),
+              startTime: value['startTime'].toString(),
+              endTime: value['endTime'].toString(),
+              itemKey: value['itemKey'].toString(),
+              status: value['status'] ?? " ",
+            );
+            dummyData.add(item);
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
+        }
       });
-    });
 
-    today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
-    bookedRoomsDb.child(today).once().then((DataSnapshot snapshot){
-      var values = snapshot.value;
+      today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+      availableRoomsByDateDb.child(today).once().then((DataSnapshot snapshot) {
+        var values = snapshot.value;
+        print("AVAILABLE values = ${values}");
 
-      var length = values.length;
-      print("LENGTH = $length");
-      for(var i=0; i<length; i++){
-        var item = AvailableItem();
-        item.endTime = values[i]["endTime"] == null ? "" : values[i]["endTime"];
-        item.roomNo = values[i]["roomNo"] == null ? "" : values[i]["roomNo"];
-        item.startTime = values[i]["startTime"] == null ? "" : values[i]["startTime"];
-        item.status = values[i]["status"] == null ? "" : values[i]["status"];
-
-        dummyData.remove(item);
-      }
-      print(".............................FINISHED LOOOP!!!");
-      setState(() {
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            AvailableItem item = AvailableItem(
+              roomNo: value['roomNo'].toString(),
+              startTime: value['startTime'].toString(),
+              endTime: value['endTime'].toString(),
+              itemKey: value['itemKey'].toString(),
+              status: value['status'] ?? " ",
+            );
+            dummyData.add(item);
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
+        }
       });
-    });
+    }
+    catch (e) {
+      print("ERROR EXCEPTION : e=$e");
+    }
   }
 
   @override
@@ -182,7 +193,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
                     width: _width,
                     child: Center(
                       child: Text(
-                        "${days[selectedDate.weekday]} ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                        "$dayName ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
                         style: TextStyle(fontSize: 30),
                       ),
                     ),
@@ -219,7 +230,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
                   itemCount: dummyData.length,
                   itemBuilder: (context, i) => Container(
                     margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: AvailableItemTile(dummyData[i]),
+                    child: AvailableItemTile(dummyData: dummyData[i], date: "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}", datasetChanged: isDatasetChanged,),
                   ),
                 ),
               ),
