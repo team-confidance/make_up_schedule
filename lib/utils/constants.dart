@@ -1,5 +1,6 @@
 class Constants{
   static String isLoggedIn = "isLoggedIn";
+  static String isAdmin = "isAdmin";
   static String emailAddress = "emailAddress";
   static String name = "name";
   static String designation = "designation";
@@ -11,4 +12,5 @@ class Constants{
   static String roomNo = 'roomNo';
   static String sectionCode = 'sectionCode';
   static String batchCode = 'batchCode';
+  static String currentPassword = 'currentPassword';
 }

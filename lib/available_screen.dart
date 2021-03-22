@@ -1,13 +1,14 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:make_up_class_schedule/model/available_item.dart';
 import 'package:make_up_class_schedule/model/available_item_tile.dart';
 
 class AvailableScreen extends StatefulWidget {
   final String day;
   final DateTime date;
+
   AvailableScreen({this.date, this.day});
+
   @override
   _AvailableScreenState createState() => _AvailableScreenState();
 }
@@ -16,20 +17,32 @@ class _AvailableScreenState extends State<AvailableScreen> {
   DatabaseReference reference = FirebaseDatabase.instance.reference();
   DatabaseReference availableRoomsByDayDb;
   DatabaseReference availableRoomsByDateDb;
+  DatabaseReference bookedRoomsDb;
   List<AvailableItem> dummyData = [];
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> sortData(List<AvailableItem> dummyData) async {
+    if (dummyData != null) {
+      print("sorting....");
+      await dummyData.sort(
+          (a, b) => int.parse(a.startTime).compareTo(int.parse(b.startTime)));
+      setState(() {});
+    }
+  }
+
+  Future<void> setUpDummyData() async {
     availableRoomsByDayDb = reference.child("AvailableRoomsByDay");
     availableRoomsByDateDb = reference.child("AvailableRoomsByDate");
+    bookedRoomsDb = reference.child("BookedRooms");
 
     var today = widget.day;
     dayName = widget.day;
     selectedDate = widget.date;
 
     try {
-      availableRoomsByDayDb.child(today.toUpperCase()).once().then((DataSnapshot snapshot) {
+      await availableRoomsByDayDb
+          .child(today.toUpperCase())
+          .once()
+          .then((DataSnapshot snapshot) {
         var values = snapshot.value;
         print("AVAILABLE values = ${values}");
         dummyData.clear();
@@ -41,7 +54,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
               roomNo: value['roomNo'].toString(),
               startTime: value['startTime'].toString(),
               endTime: value['endTime'].toString(),
-              itemKey: value['itemKey'].toString(),
+              itemKey: key.toString(),
               status: value['status'] ?? " ",
             );
             dummyData.add(item);
@@ -51,8 +64,12 @@ class _AvailableScreenState extends State<AvailableScreen> {
         }
       });
 
-      today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";;
-      availableRoomsByDateDb.child(today).once().then((DataSnapshot snapshot) {
+      today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+      ;
+      await availableRoomsByDateDb
+          .child(today)
+          .once()
+          .then((DataSnapshot snapshot) {
         var values = snapshot.value;
         print("AVAILABLE values = ${values}");
 
@@ -63,7 +80,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
               roomNo: value['roomNo'].toString(),
               startTime: value['startTime'].toString(),
               endTime: value['endTime'].toString(),
-              itemKey: value['itemKey'].toString(),
+              itemKey: key.toString(),
               status: value['status'] ?? " ",
             );
             dummyData.add(item);
@@ -72,10 +89,40 @@ class _AvailableScreenState extends State<AvailableScreen> {
           setState(() {});
         }
       });
-    }
-    catch (e) {
+
+      await bookedRoomsDb.child(today).once().then((DataSnapshot snapshot) {
+        var values = snapshot.value;
+        print("VALUES3 = $values");
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            var itemKey = value['itemKey'];
+            var item;
+            bool flag = false;
+            for (item in dummyData) {
+              if (item.itemKey == itemKey) {
+                flag = true;
+                break;
+              }
+            }
+            if (flag) {
+              dummyData.remove(item);
+            }
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
+        }
+      });
+      await sortData(dummyData);
+    } catch (e) {
       print("ERROR EXCEPTION : e=$e");
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    setUpDummyData();
   }
 
   DateTime selectedDate;
@@ -105,20 +152,22 @@ class _AvailableScreenState extends State<AvailableScreen> {
       });
   }
 
-  void isDatasetChanged(bool isChanged){
-    if(isChanged){
+  void isDatasetChanged(bool isChanged) {
+    if (isChanged) {
       print("GOING TO resetData() function");
       _resetData(dayName, selectedDate);
-    }
-    else{
+    } else {
       print("DATASET did not changed");
     }
   }
 
-  void _resetData(String today, DateTime selectedDate) {
+  Future<void> _resetData(String today, DateTime selectedDate) async {
     dummyData.clear();
     try {
-      availableRoomsByDayDb.child(today.toUpperCase()).once().then((DataSnapshot snapshot) {
+      await availableRoomsByDayDb
+          .child(today.toUpperCase())
+          .once()
+          .then((DataSnapshot snapshot) {
         var values = snapshot.value;
         print("AVAILABLE values = ${values}");
         dummyData.clear();
@@ -130,7 +179,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
               roomNo: value['roomNo'].toString(),
               startTime: value['startTime'].toString(),
               endTime: value['endTime'].toString(),
-              itemKey: value['itemKey'].toString(),
+              itemKey: key.toString(),
               status: value['status'] ?? " ",
             );
             dummyData.add(item);
@@ -141,7 +190,10 @@ class _AvailableScreenState extends State<AvailableScreen> {
       });
 
       today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
-      availableRoomsByDateDb.child(today).once().then((DataSnapshot snapshot) {
+      await availableRoomsByDateDb
+          .child(today)
+          .once()
+          .then((DataSnapshot snapshot) {
         var values = snapshot.value;
         print("AVAILABLE values = ${values}");
 
@@ -152,7 +204,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
               roomNo: value['roomNo'].toString(),
               startTime: value['startTime'].toString(),
               endTime: value['endTime'].toString(),
-              itemKey: value['itemKey'].toString(),
+              itemKey: key.toString(),
               status: value['status'] ?? " ",
             );
             dummyData.add(item);
@@ -161,8 +213,32 @@ class _AvailableScreenState extends State<AvailableScreen> {
           setState(() {});
         }
       });
-    }
-    catch (e) {
+
+      await bookedRoomsDb.child(today).once().then((DataSnapshot snapshot) {
+        var values = snapshot.value;
+        print("VALUES3 = $values");
+        if (values != null) {
+          Map<dynamic, dynamic> valueList = snapshot.value;
+          valueList.forEach((key, value) {
+            var itemKey = value['itemKey'];
+            var item;
+            bool flag = false;
+            for (item in dummyData) {
+              if (item.itemKey == itemKey) {
+                flag = true;
+                break;
+              }
+            }
+            if (flag) {
+              dummyData.remove(item);
+            }
+          });
+          print(".............................FINISHED LOOOP!!!");
+          setState(() {});
+        }
+      });
+      sortData(dummyData);
+    } catch (e) {
       print("ERROR EXCEPTION : e=$e");
     }
   }
@@ -179,7 +255,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
         ),
         body: Container(
           height: _height,
-          decoration: BoxDecoration(color: Color(0xFFE4ECF1)),
+          decoration: BoxDecoration(color: Color(0xFFFFFFFF)),
           padding: EdgeInsets.symmetric(horizontal: 10),
           child: Column(
             children: <Widget>[
@@ -191,11 +267,26 @@ class _AvailableScreenState extends State<AvailableScreen> {
                   },
                   child: Container(
                     width: _width,
-                    child: Center(
-                      child: Text(
-                        "$dayName ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
-                        style: TextStyle(fontSize: 30),
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Container(
+                          margin: EdgeInsets.only(left: 8.0),
+                          child: Text(
+                            "$dayName ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                            style: TextStyle(fontSize: 22),
+                          ),
+                        ),
+                        Container(
+                          margin: EdgeInsets.only(right: 8.0),
+                          child: Text(
+                            "Change",
+                            style: TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -211,7 +302,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   Text("Routine", style: TextStyle(fontSize: 26)),
-                  *//*GestureDetector(
+                  */ /*GestureDetector(
                     onTap: (){
                       Navigator.of(context).push(MaterialPageRoute(
                           builder: (context) => AvailableScreen()));
@@ -222,17 +313,25 @@ class _AvailableScreenState extends State<AvailableScreen> {
                       decoration: BoxDecoration(color: Colors.white,borderRadius: BorderRadius.circular(10)),
                       child: Icon(Icons.add),
                     ),
-                  ),*//*
+                  ),*/ /*
                 ],
               ),*/
               Expanded(
-                child: ListView.builder(
-                  itemCount: dummyData.length,
-                  itemBuilder: (context, i) => Container(
-                    margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: AvailableItemTile(dummyData: dummyData[i], date: "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}", datasetChanged: isDatasetChanged,),
-                  ),
-                ),
+                child: dummyData.length == 0
+                    ? Text("NO ITEM")
+                    : ListView.builder(
+                        itemCount: dummyData.length,
+                        itemBuilder: (context, i) => Container(
+                          margin:
+                              EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          child: AvailableItemTile(
+                            dummyData: dummyData[i],
+                            date:
+                                "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                            datasetChanged: isDatasetChanged,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),

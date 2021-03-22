@@ -17,10 +17,24 @@ class _RoutineScreenState extends State<RoutineScreen> {
   DatabaseReference makeUpScheduleDb;
   DatabaseReference cancelledScheduleDb;
   List<ScheduleItem> dummyData = [];
+  var _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
+  void controlProgressLoading(bool mValue) {
+    setState(() {
+      _isLoading = mValue;
+    });
+  }
+
+  Future<void> sortData(List<ScheduleItem> dummyData) async {
+    if (dummyData != null) {
+      print("sorting....");
+      await dummyData.sort(
+          (a, b) => int.parse(a.startTime).compareTo(int.parse(b.startTime)));
+      setState(() {});
+    }
+  }
+
+  Future<void> setUpDummyData() async {
     mainScheduleDb = reference.child("MainSchedule");
     makeUpScheduleDb = reference.child("MakeupSchedule");
     cancelledScheduleDb = reference.child("CancelledSchedule");
@@ -30,12 +44,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
     dayName = today;
 
     print("today = $today  selectedDate = $selectedDate");
-    mainScheduleDb.child(today.toUpperCase()).child("AAC").once().then((DataSnapshot snapshot){
+    await mainScheduleDb
+        .child(today.toUpperCase())
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       dummyData.clear();
       print("Values = $values");
 
-      if(values != null){
+      if (values != null) {
         /*for(var value in values){
           var item = ScheduleItem();
           item.courseId = value["courseId"] == null ? "" : value["courseId"];
@@ -49,60 +67,88 @@ class _RoutineScreenState extends State<RoutineScreen> {
         Map<dynamic, dynamic> valueList = snapshot.value;
         valueList.forEach((key, value) {
           ScheduleItem item = ScheduleItem(
-              roomNo: value['roomNo'].toString(), endTime: value['endTime'].toString(),
-              startTime: value['startTime'].toString(), courseId: value['courseId'].toString(),
-              batchCode: value['batchCode'].toString(), section: value['section'].toString(),
-              teacherCode: value['teacherCode'].toString(), itemKey: key,
-              status: value['status'] ?? " ", courseName: value['courseName'] ?? " ",
+            roomNo: value['roomNo'].toString(),
+            endTime: value['endTime'].toString(),
+            startTime: value['startTime'].toString(),
+            courseId: value['courseId'].toString(),
+            batchCode: value['batchCode'].toString(),
+            section: value['section'].toString(),
+            teacherCode: value['teacherCode'].toString(),
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
           );
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
+        setState(() {});
       }
     });
 
     today = "${date.day}-${date.month}-${date.year}";
-    makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    await makeUpScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       print("VALUES2 = $values");
 
-      if(values != null){
-        for(var value in values){
-          var item = ScheduleItem();
-          item.courseId = value["courseId"] == null ? "" : value["courseId"].toString();
-          item.endTime = value["endTime"] == null ? "" : value["endTime"].toString();
-          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"].toString();
-          item.startTime = value["startTime"] == null ? "" : value["startTime"].toString();
-          item.status = value["status"] == null ? "" : value["status"].toString();
-
+      if (values != null) {
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'],
+            endTime: value['endTime'],
+            startTime: value['startTime'],
+            courseId: value['courseId'],
+            batchCode: value['batchCode'],
+            section: value['section'],
+            teacherCode: value['teacherCode'],
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
+          );
           dummyData.add(item);
-        }
-        print(".............................FINISHED LOOOP!!!");
-        setState(() {
         });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {});
       }
     });
-    cancelledScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    await cancelledScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       print("VALUES3 = $values");
-      if(values != null){
+      if (values != null) {
         Map<dynamic, dynamic> valueList = snapshot.value;
         valueList.forEach((key, value) {
           var itemKey = value['itemKey'];
-          for(var item in dummyData){
-            if(item.itemKey == itemKey){
-              dummyData.remove(item);
+          var item;
+          bool flag = false;
+          for (item in dummyData) {
+            if (item.itemKey == itemKey) {
+              flag = true;
               break;
             }
           }
+          if (flag) {
+            dummyData.remove(item);
+          }
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
+        setState(() {});
       }
     });
+    await sortData(dummyData);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    setUpDummyData();
   }
 
   DateTime selectedDate = DateTime.now();
@@ -132,25 +178,29 @@ class _RoutineScreenState extends State<RoutineScreen> {
         resetData(dayName, selectedDate);
       });
   }
-  void isDatasetChanged(bool isChanged){
-    if(isChanged){
+
+  void isDatasetChanged(bool isChanged) {
+    if (isChanged) {
       print("GOING TO resetData() function");
       resetData(dayName, selectedDate);
-    }
-    else{
+    } else {
       print("DATASET did not changed");
     }
   }
 
-  Future<void> resetData(String today, DateTime selectedDate) async{
+  Future<void> resetData(String today, DateTime selectedDate) async {
     dummyData.clear();
     print("today = $today  selectedDate = $selectedDate");
-    await mainScheduleDb.child(today.toUpperCase()).child("AAC").once().then((DataSnapshot snapshot){
+    await mainScheduleDb
+        .child(today.toUpperCase())
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       dummyData.clear();
       print("VALUES = $values");
 
-      if(values != null){
+      if (values != null) {
         /*for(var value in values){
           var item = ScheduleItem();
           item.courseId = value["courseId"] == null ? "" : value["courseId"];
@@ -164,65 +214,83 @@ class _RoutineScreenState extends State<RoutineScreen> {
         Map<dynamic, dynamic> valueList = snapshot.value;
         valueList.forEach((key, value) {
           ScheduleItem item = ScheduleItem(
-            roomNo: value['roomNo'], endTime: value['endTime'],
-            startTime: value['startTime'], courseId: value['courseId'],
-            batchCode: value['batchCode'], section: value['section'],
-            teacherCode: value['teacherCode'], itemKey: key,
-            status: value['status'] ?? " ", courseName: value['courseName'] ?? " ",
+            roomNo: value['roomNo'],
+            endTime: value['endTime'],
+            startTime: value['startTime'],
+            courseId: value['courseId'],
+            batchCode: value['batchCode'],
+            section: value['section'],
+            teacherCode: value['teacherCode'],
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
           );
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
+        setState(() {});
       }
     });
 
     today = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
-    await makeUpScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+    await makeUpScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       print("VALUES2 = $values");
 
-      if(values != null){
-        for(var value in values){
-          var item = ScheduleItem();
-          item.courseId = value["courseId"] == null ? "" : value["courseId"];
-          item.endTime = value["endTime"] == null ? "" : value["endTime"];
-          item.roomNo = value["roomNo"] == null ? "" : value["roomNo"];
-          item.startTime = value["startTime"] == null ? "" : value["startTime"];
-          item.status = value["status"] == null ? "" : value["status"];
-
+      if (values != null) {
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'],
+            endTime: value['endTime'],
+            startTime: value['startTime'],
+            courseId: value['courseId'],
+            batchCode: value['batchCode'],
+            section: value['section'],
+            teacherCode: value['teacherCode'],
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
+          );
           dummyData.add(item);
-        }
-        print(".............................FINISHED LOOOP!!!");
-        setState(() {
         });
+        print(".............................FINISHED LOOOP!!!");
+        setState(() {});
       }
     });
-    cancelledScheduleDb.child(today).child("AAC").once().then((DataSnapshot snapshot){
+
+    await cancelledScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
       var values = snapshot.value;
       print("VALUES3 = $values");
-      if(values != null){
+      if (values != null) {
         Map<dynamic, dynamic> valueList = snapshot.value;
         valueList.forEach((key, value) {
           var itemKey = value['itemKey'];
           var item;
           bool flag = false;
-          for(item in dummyData){
-            if(item.itemKey == itemKey){
+          for (item in dummyData) {
+            if (item.itemKey == itemKey) {
               flag = true;
               break;
             }
           }
-          if(flag){
+          if (flag) {
             dummyData.remove(item);
           }
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {
-        });
+        setState(() {});
       }
     });
+    sortData(dummyData);
   }
 
   @override
@@ -233,7 +301,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
     return Scaffold(
         body: Container(
       height: _height,
-      decoration: BoxDecoration(color: Color(0xFFE4ECF1)),
+      decoration: BoxDecoration(color: Color(0xFFFFFFFF)),
       padding: EdgeInsets.symmetric(horizontal: 10),
       child: Column(
         children: <Widget>[
@@ -245,11 +313,26 @@ class _RoutineScreenState extends State<RoutineScreen> {
               },
               child: Container(
                 width: _width,
-                child: Center(
-                  child: Text(
-                    "${dayName} ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
-                    style: TextStyle(fontSize: 30),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      margin: EdgeInsets.only(left: 8.0),
+                      child: Text(
+                        "$dayName ${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                        style: TextStyle(fontSize: 22),
+                      ),
+                    ),
+                    Container(
+                      margin: EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        "Change",
+                        style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -264,29 +347,59 @@ class _RoutineScreenState extends State<RoutineScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Text("Routine", style: TextStyle(fontSize: 26)),
+              Container(
+                margin: EdgeInsets.only(left: 8.0),
+                child: Text(
+                  "Routine",
+                  style: TextStyle(
+                    fontSize: 22.0,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF376D28),
+                  ),
+                ),
+              ),
               GestureDetector(
-                onTap: (){
+                onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => AvailableScreen(day: dayName, date: selectedDate,)));
+                      builder: (context) => AvailableScreen(
+                            day: dayName,
+                            date: selectedDate,
+                          )));
                 },
                 child: Container(
                   margin: EdgeInsets.only(right: 10),
-                  padding: EdgeInsets.all(5),
-                  decoration: BoxDecoration(color: Colors.white,borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.add),
+                  padding: EdgeInsets.all(10.0),
+                  decoration: BoxDecoration(
+                    // color: Colors.blueAccent,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Color(0xFF376D28)),
+                  ),
+                  // child: Icon(Icons.add),
+                  child: Text(
+                    "Available Rooms",
+                    style: TextStyle(
+                        color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
           ),
           Expanded(
-            child: dummyData.length ==0 ? Text("NO ITEM") : ListView.builder(
-              itemCount: dummyData.length,
-              itemBuilder: (context, i) => Container(
-                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: ItemTile(dummyData: dummyData[i], date: "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}", datasetChanged: isDatasetChanged,),
-              ),
-            ),
+            child: dummyData.length == 0
+                ? Text("NO ITEM")
+                : ListView.builder(
+                    itemCount: dummyData.length,
+                    itemBuilder: (context, i) => Container(
+                      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      child: ItemTile(
+                        dummyData: dummyData[i],
+                        date:
+                            "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}",
+                        datasetChanged: isDatasetChanged,
+                        progressLoading: controlProgressLoading,
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),

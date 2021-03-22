@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:make_up_class_schedule/auth_screen.dart';
 import 'package:make_up_class_schedule/home_screen.dart';
 import 'package:make_up_class_schedule/notification_screen.dart';
@@ -26,11 +27,22 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
   }
+  void _showToast(String mText){
+    Fluttertoast.showToast(
+        msg: mText,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.blueAccent,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    var selColor = Color(0xFFFEACB6);
-    var deselColor = Color(0xFFE4ECF1);
+    var selColor = Color(0xFF35BA3D);
+    var deselColor = Color(0xFFD3D3D3);
 
     return Scaffold(
       appBar: AppBar(
@@ -41,8 +53,9 @@ class _MainScreenState extends State<MainScreen> {
               icon: Icon(Icons.notifications),
               onPressed: () {
                 print("Clicked on Notification");
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => NotificationScreen()));
+                _showToast("Coming soon...");
+                /*Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => NotificationScreen()));*/
               }),
           IconButton(
             icon: Icon(Icons.logout),
@@ -68,9 +81,11 @@ class _MainScreenState extends State<MainScreen> {
       floatingActionButton: FloatingActionButton(
         child: Icon(
           Icons.ballot,
-          color: _currentIndex == 1 ? selColor : deselColor,
+          // color: _currentIndex == 1 ? selColor : deselColor,
+          color: _currentIndex == 1 ? Colors.white : Colors.blueGrey,
         ),
-        backgroundColor: Colors.deepOrange,
+        // backgroundColor: Colors.deepOrange,
+        backgroundColor: _currentIndex == 1 ? selColor : deselColor,
         onPressed: () {
           setState(() {
             _currentIndex = 1;

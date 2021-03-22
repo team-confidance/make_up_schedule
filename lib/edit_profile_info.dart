@@ -1,28 +1,37 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:make_up_class_schedule/auth_screen.dart';
 import 'package:make_up_class_schedule/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class EditPassword extends StatefulWidget {
-  final String currentPassword, firebaseKey;
+class EditProfileInfo extends StatefulWidget {
+  final String currentName, currentDesignation, firebaseKey;
   final Function sendCallBack;
-  EditPassword({this.currentPassword, this.firebaseKey, this.sendCallBack, Key key}) : super(key: key);
+
+  EditProfileInfo(
+      {this.sendCallBack,
+      this.firebaseKey,
+      this.currentDesignation,
+      this.currentName,
+      Key key})
+      : super(key: key);
+
   @override
-  _EditPasswordState createState() => _EditPasswordState();
+  _EditProfileInfoState createState() => _EditProfileInfoState();
 }
 
-class _EditPasswordState extends State<EditPassword> {
-  var changedPassword = "", changedConfirmPassword = "", currentPasswordField = "";
-  var isChagedPassword = false, isCurrentPasswordRight = false;
+class _EditProfileInfoState extends State<EditProfileInfo> {
+  var changedFullName = "", changedDesignation = "";
+  var isChangedName = false, isChangedDesignation = false;
+
   @override
   Widget build(BuildContext context) {
+    var currentName = widget.currentName,
+        currentDesignation = widget.currentDesignation;
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: Text("Change Password"),
+          title: Text("Edit Profile"),
         ),
         body: Container(
           margin: EdgeInsets.symmetric(horizontal: 20),
@@ -31,8 +40,12 @@ class _EditPasswordState extends State<EditPassword> {
               Container(
                 height: 70,
                 width: double.infinity,
-                margin:
-                    EdgeInsets.only(top: 50, left: 30, right: 30, bottom: 80),
+                margin: EdgeInsets.only(
+                  top: 50,
+                  left: 30,
+                  right: 30,
+                  bottom: 80,
+                ),
                 decoration: BoxDecoration(
                     color: Color(0xFFF8F8F8),
                     border: Border.all(color: Color(0xFF376D28)),
@@ -44,7 +57,7 @@ class _EditPasswordState extends State<EditPassword> {
                 child: Container(
                   child: Center(
                       child: Text(
-                    "Change Your Password",
+                    "Edit Your Profile",
                     style: TextStyle(
                           color: Color(0xFF376D28), fontSize: 24),
                   )),
@@ -59,24 +72,17 @@ class _EditPasswordState extends State<EditPassword> {
                       focusedBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Colors.black)),
                       border: InputBorder.none,
-                      hintText: "Current password",
+                      hintText: currentName,
                     ),
                     maxLength: 32,
                     style: TextStyle(fontSize: 24),
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
                     onChanged: (value) {
                       setState(() {
                         if (value.isNotEmpty) {
-                          currentPasswordField = value;
-                          if(currentPasswordField == widget.currentPassword){
-                            isCurrentPasswordRight = true;
-                          }
-                        }
-                        else {
-                          isCurrentPasswordRight = false;
-                          currentPasswordField = " ";
+                          changedFullName = value;
+                          isChangedName = true;
+                        } else {
+                          isChangedName = false;
                         }
                       });
                     },
@@ -88,42 +94,18 @@ class _EditPasswordState extends State<EditPassword> {
                       focusedBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Colors.black)),
                       border: InputBorder.none,
-                      hintText: "New password",
+                      hintText: currentDesignation,
                     ),
                     maxLength: 32,
                     style: TextStyle(fontSize: 24),
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
                     onChanged: (value) {
                       setState(() {
                         if (value.isNotEmpty) {
-                          changedPassword = value;
-                          isChagedPassword = true;
+                          changedDesignation = value;
+                          isChangedDesignation = true;
+                        } else {
+                          isChangedDesignation = false;
                         }
-                        else {
-                          isChagedPassword = false;
-                        }
-                      });
-                    },
-                  ),
-                  TextField(
-                    decoration: InputDecoration(
-                      enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey)),
-                      focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black)),
-                      border: InputBorder.none,
-                      hintText: "Confirm password",
-                    ),
-                    maxLength: 32,
-                    style: TextStyle(fontSize: 24),
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    onChanged: (value) {
-                      setState(() {
-                        changedConfirmPassword = value;
                       });
                     },
                   ),
@@ -134,22 +116,18 @@ class _EditPasswordState extends State<EditPassword> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  if(isCurrentPasswordRight){
-                    if(changedPassword == changedConfirmPassword){
-                      if(changedPassword.length >= 6){
-                        submitToFirebase();
+                  if (isChangedDesignation || isChangedName) {
+                    setState(() {
+                      if (!isChangedName) {
+                        changedFullName = currentName;
                       }
-                      else{
-                        showToast("New password is smaller than 6 digits!");
+                      if (!isChangedDesignation) {
+                        changedDesignation = currentDesignation;
                       }
-                    }
-                    else{
-                      showToast("New password and confirm password field is not same!");
-                    }
-                  }
-                  else{
-                    print("CurrentPassword = $currentPasswordField != widget.currentPass = ${widget.currentPassword}");
-                    showToast("Current password is not correct!");
+                      _alertDialogBuilder();
+                    });
+                  } else {
+                    showToast("Please change at least one field!");
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -159,7 +137,7 @@ class _EditPasswordState extends State<EditPassword> {
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                child: Text("Confirm"),
+                child: Text("Edit profile"),
                 //padding: EdgeInsets.symmetric(horizontal: 80, vertical: 18),
               ),
             ],
@@ -168,6 +146,7 @@ class _EditPasswordState extends State<EditPassword> {
       ),
     );
   }
+
   Future<void> _alertDialogBuilder() async {
     return showDialog(
         context: context,
@@ -176,7 +155,7 @@ class _EditPasswordState extends State<EditPassword> {
           return AlertDialog(
             title: Text("Are you sure?"),
             content: Container(
-              child: Text("Do you want to change password?"),
+              child: Text("Do you want to change profile info?"),
             ),
             actions: [
               ElevatedButton(
@@ -209,11 +188,13 @@ class _EditPasswordState extends State<EditPassword> {
     try {
       DatabaseReference reference = FirebaseDatabase.instance.reference();
       await reference.child("UserInfo").child(widget.firebaseKey).update({
-        Constants.currentPassword: changedPassword,
+        Constants.name: changedFullName,
+        Constants.designation: changedDesignation,
       });
       isFirebaseInfoChanged(true);
       SharedPreferences preferences = await SharedPreferences.getInstance();
-      await preferences.setString(Constants.currentPassword, changedPassword);
+      await preferences.setString(Constants.designation, changedDesignation);
+      await preferences.setString(Constants.name, changedFullName);
       await widget.sendCallBack();
     } catch (e) {
       print("EXCEPTION : e = $e");

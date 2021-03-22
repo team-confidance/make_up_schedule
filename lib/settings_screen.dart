@@ -6,11 +6,15 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:make_up_class_schedule/create_new_user_screen.dart';
 import 'package:make_up_class_schedule/edit_password.dart';
 import 'package:make_up_class_schedule/edit_phone_number.dart';
+import 'package:make_up_class_schedule/edit_profile_info.dart';
 import 'package:make_up_class_schedule/model/dummy_class_rooms.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   @override
@@ -18,6 +22,31 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  var userName = " ", designation = " ", email = " ", phone = " ", photoUrl = "", firebaseKey = "", currentPassword = "";
+  var isAdmin = false;
+  var _isLoading = true;
+
+  void getPreferences() async {
+    var preference = await SharedPreferences.getInstance();
+    email = preference.getString(Constants.emailAddress);
+    userName = preference.getString(Constants.name);
+    designation = preference.getString(Constants.designation);
+    phone = preference.getString(Constants.phone);
+    photoUrl =  preference.getString(Constants.photoUrl);
+    isAdmin = preference.getBool(Constants.isAdmin);
+    firebaseKey = preference.getString(Constants.firebaseKey);
+    currentPassword = preference.getString(Constants.currentPassword);
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    getPreferences();
+    super.initState();
+  }
 
   void _showToast(String mText){
     Fluttertoast.showToast(
@@ -44,7 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
+      body: _isLoading ? Center(child: CircularProgressIndicator()) : Container(
         decoration: BoxDecoration(color: Color(0xFFE4ECF1)),
         //width: MediaQuery.of(context).size.width,
         width: double.infinity,
@@ -59,11 +88,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             Container(
               child: Text(
-                "Arif Ahmed",
+                userName,
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
               ),
             ),
-            Container(child: Text("Associate Professor")),
+            Container(child: Text(designation)),
             Container(
               margin: EdgeInsets.only(top: 50),
               child: Column(
@@ -76,25 +105,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: TextStyle(fontSize: 20),
                       ),
                       Text(
-                        "arifahmed@lus.ac.bd",
+                        email,
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Phone: ",
-                        style: TextStyle(fontSize: 20),
-                      ),
-                      Text(
-                        "+8801xxxxxxx",
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      TextButton(
+                      /*TextButton(
                         onPressed: () {
                           print("Edit Button Clicked");
                           Navigator.push(
@@ -106,119 +121,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           "Edit",
                           style: TextStyle(fontSize: 15),
                         ),
-                      )
+                      )*/
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Phone: ",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      Text(
+                        phone,
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      /*TextButton(
+                        onPressed: () {
+                          print("Edit Button Clicked");
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => EditPhoneNumber()));
+                        },
+                        child: Text(
+                          "Edit",
+                          style: TextStyle(fontSize: 15),
+                        ),
+                      )*/
                     ],
                   )
                 ],
               ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => EditPassword()));
-              },
-              /*shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18.0),
-                  side: BorderSide(color: Colors.red)),*/
-              style: ElevatedButton.styleFrom(
-                primary: Colors.lightBlue,
-                onPrimary: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32.0),
-                ),
-              ),
-              child: Text("Change password"),
-            ),
-            Visibility(
-              child: Text(_fileName),
-              visible: _isFilePicked,
-            ),
+            SizedBox(height: 20.0,),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: ()  async {
-                    print("UPLOAD ROUTINE button pressed");
-                    try{
-                      FilePickerResult result = await FilePicker.platform.pickFiles();
-
-                      if(result != null) {
-                        PlatformFile file = result.files.first;
-
-                        setState(() {
-                          _fileName = file.name.toString();
-                          _isFilePicked = true;
-                          /*_byte = file.bytes.toString();
-                          _size = file.size.toString();
-                          _extension = file.extension.toString();
-                          _path = file.path.toString();*/
-                        });
-
-                        print(file.name);
-                        print(file.bytes);
-                        print(file.size);
-                        print(file.extension);
-                        print(file.path);
-
-
-
-                        var mPath = file.path;
-                        var bytes = File(mPath).readAsBytesSync();
-                        var excel = Excel.decodeBytes(bytes);
-                        _uploadTableToFirebase(excel);
-
-                        for (var table in excel.tables.keys) {
-                          print("TABLE = $table"); //sheet Name
-                          print("Max COL = " + excel.tables[table].maxCols.toString());
-                          print("MAX ROW = " + excel.tables[table].maxRows.toString());
-                          for (var row in excel.tables[table].rows) {
-                            print("...............ROW = $row");
-                            print("ROW.type = ${row.runtimeType}   ROW.size = ${row.length}");
-                          }
-                        }
-
-                      } else {
-                        // User canceled the picker
-                      }
-                    }
-                    catch(e){
-                      print(">>>>>>>..........>>>>>>>>EXCEPTION : $e");
-                    }
+                  onPressed: () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => EditProfileInfo(sendCallBack: getPreferences,currentName: userName, currentDesignation: designation, firebaseKey: firebaseKey,)));
                   },
                   /*shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18.0),
-                  side: BorderSide(color: Colors.red)),*/
+                      borderRadius: BorderRadius.circular(18.0),
+                      side: BorderSide(color: Colors.red)),*/
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.lightBlue,
+                    primary: Color(0xFF216BFA),
                     onPrimary: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32.0),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: Text("Upload Routine"),
+                  child: Text("Change profile info"),
                 ),
-                SizedBox(
-                  width: 10.0,
-                ),
+                SizedBox(width: 10.0,),
                 ElevatedButton(
                   onPressed: () {
-                    print("CREATE USER button pressed");
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => CreateUser()));
+                        MaterialPageRoute(builder: (context) => EditPassword(firebaseKey: firebaseKey, currentPassword: currentPassword, sendCallBack: getPreferences,)));
                   },
                   /*shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18.0),
-                  side: BorderSide(color: Colors.red)),*/
+                      borderRadius: BorderRadius.circular(18.0),
+                      side: BorderSide(color: Colors.red)),*/
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.lightBlue,
+                    primary: Color(0xFF216BFA),
                     onPrimary: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32.0),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: Text("Create New User"),
+                  child: Text("Change password"),
                 ),
               ],
+            ),
+            SizedBox(height: 20.0,),
+            Visibility(
+              child: Text(_fileName),
+              visible: _isFilePicked,
+            ),
+            Visibility(
+              visible: isAdmin,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: ()  async {
+                      print("UPLOAD ROUTINE button pressed");
+                      try{
+                        FilePickerResult result = await FilePicker.platform.pickFiles();
+
+                        if(result != null) {
+                          PlatformFile file = result.files.first;
+
+                          setState(() {
+                            _fileName = file.name.toString();
+                            _isFilePicked = true;
+                            /*_byte = file.bytes.toString();
+                            _size = file.size.toString();
+                            _extension = file.extension.toString();
+                            _path = file.path.toString();*/
+                          });
+
+                          print(file.name);
+                          print(file.bytes);
+                          print(file.size);
+                          print(file.extension);
+                          print(file.path);
+
+
+
+                          var mPath = file.path;
+                          var bytes = File(mPath).readAsBytesSync();
+                          var excel = Excel.decodeBytes(bytes);
+                          _uploadTableToFirebase(excel);
+
+
+                          for (var table in excel.tables.keys) {
+                            print("TABLE = $table"); //sheet Name
+                            print("Max COL = " + excel.tables[table].maxCols.toString());
+                            print("MAX ROW = " + excel.tables[table].maxRows.toString());
+                            for (var row in excel.tables[table].rows) {
+                              print("...............ROW = $row");
+                              print("ROW.type = ${row.runtimeType}   ROW.size = ${row.length}");
+                            }
+                          }
+                        } else {
+                          // User canceled the picker
+                        }
+                      }
+                      catch(e){
+                        print(">>>>>>>..........>>>>>>>>EXCEPTION : $e");
+                      }
+                    },
+                    /*shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18.0),
+                    side: BorderSide(color: Colors.red)),*/
+                    style: ElevatedButton.styleFrom(
+                      primary: Color(0xFF216BFA),
+                      onPrimary: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    child: Text("Upload Routine"),
+                  ),
+                  SizedBox(
+                    width: 10.0,
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      print("CREATE USER button pressed");
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => CreateUser()));
+                    },
+                    /*shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18.0),
+                    side: BorderSide(color: Colors.red)),*/
+                    style: ElevatedButton.styleFrom(
+                      primary: Color(0xFF216BFA),
+                      onPrimary: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    child: Text("Create New User"),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -310,7 +380,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       "startTime" : times[i].fromTime,
                       "endTime" : times[i].toTime,
                     });
-                    _showToast("Routine uploaded successfully!");
                     print("ROUTINE UPLOADED!");
                   }
                   catch(e){

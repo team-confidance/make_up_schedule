@@ -6,8 +6,10 @@ class LoginInfo{
   var phone = "Phone";
   var photoUrl = "photoUrl";
   var firebaseKey = "firebaseKey";
+  var isAdmin = "isAdmin";
+  var currentPassword = "currentPassword";
 
-  LoginInfo({this.email, this.password, this.name, this.designation, this.phone, this.photoUrl, this.firebaseKey});
+  LoginInfo({this.currentPassword, this.isAdmin, this.email, this.password, this.name, this.designation, this.phone, this.photoUrl, this.firebaseKey});
   LoginInfo.fromJsond(Map<dynamic,dynamic> json)
     : email = json['email'],
       password = json['password'],
@@ -15,5 +17,6 @@ class LoginInfo{
       designation = json['designation'],
       phone = json['phone'],
       photoUrl = json['photoUrl'],
-      firebaseKey = json['firebaseKey'];
+      firebaseKey = json['firebaseKey'],
+      isAdmin = json['isAdmin'];
 }

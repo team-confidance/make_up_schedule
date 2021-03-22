@@ -1,5 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/auth_screen.dart';
 import 'package:make_up_class_schedule/main_screen.dart';
@@ -15,21 +13,29 @@ class _LandingPageState extends State<LandingPage> {
   final Future<SharedPreferences> _preference = SharedPreferences.getInstance();
 
   bool _isLoggedIn = false;
+  bool _isLoading = true;
   SharedPreferences preferences;
 
-  void _getPreference() async{
+  void _getPreference() async {
     preferences = await _preference;
     _isLoggedIn = preferences.getBool(Constants.isLoggedIn) ?? false;
+    _isLoading = false;
   }
 
   @override
-  void initState(){
+  void initState() {
     _getPreference();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _isLoggedIn ? MainScreen() : AuthScreen();
+    return _isLoading
+        ? Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          )
+        : (_isLoggedIn ? MainScreen() : AuthScreen());
   }
 }

@@ -1,4 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/model/schedule_item.dart';
 import 'package:make_up_class_schedule/utils/constraints.dart';
@@ -7,19 +8,35 @@ class ItemTile extends StatefulWidget {
   final ScheduleItem dummyData;
   final String date;
   Function datasetChanged;
-  ItemTile({Key key, this.dummyData, this.date, this.datasetChanged}) : super(key: key);
+  Function progressLoading;
+  ItemTile({Key key, this.progressLoading, this.dummyData, this.date, this.datasetChanged}) : super(key: key);
   @override
   _ItemTileState createState() => _ItemTileState();
 }
 
+var tileWidth = 50.0, tileHeight = 25.0;
+
 class _ItemTileState extends State<ItemTile> {
+  bool isRoomInOneWord(List<String> afterSplit){
+    print("isRoomInOneWord:: afterSplit = $afterSplit");
+    if(afterSplit.length>1){
+      setState(() {
+        tileHeight = 30.0;
+      });
+      return false;
+    }
+    else{
+      return true;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     var afterSplit = widget.dummyData.roomNo.split(' ');
     return Container(
+      margin: EdgeInsets.only(top: 10.0),
       padding: EdgeInsets.fromLTRB(10, 10, 0, 10),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10), color: Colors.white),
+          borderRadius: BorderRadius.circular(10), color: Color(0xFFF8F8F8)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -48,10 +65,10 @@ class _ItemTileState extends State<ItemTile> {
                     size: 14,
                   ),
                   Text(
-                    widget.dummyData.status,
-                    style: TextStyle(
+                    widget.dummyData.section,
+                    /*style: TextStyle(
                         color: statusColorOf(widget.dummyData.status),
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.bold),*/
                   )
                 ],
               )
@@ -63,42 +80,54 @@ class _ItemTileState extends State<ItemTile> {
                 /*Text("Room No",
                     style: TextStyle(fontSize: 8, color: Colors.black)),*/
                 Container(
-                  height: 40,
-                  width: 50,
+                  /*height: tileHeight,
+                  width: tileWidth,*/
                   decoration: BoxDecoration(
-                    color: Color(0x20FF0070),
-                    borderRadius: BorderRadius.all(Radius.elliptical(100, 80)),
+                    // color: Color(0x20FF0070),
+                    color: Color(0xFF69C25A),
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(5.0)
+                    ),
+                    // border: Border.all(color: Color(0xFF376D28)),
                   ),
                   child: Center(
-                    child: afterSplit.length ==1 ? Text(
-                      widget.dummyData.roomNo.toString(),
-                      style: TextStyle(
-                        color: Color(0xff565756),
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                    child: isRoomInOneWord(afterSplit) ? Container(
+                      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
+                      child: Text(
+                        widget.dummyData.roomNo.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          // fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ) : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          afterSplit[0],
-                          style: TextStyle(
-                            color: Color(0xff565756),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                    ) : Container(
+                      margin: EdgeInsets.symmetric(vertical: 2.0, horizontal: 10.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            afterSplit[0],
+                            style: TextStyle(
+                              // color: Color(0xff565756),
+                              color: Colors.white,
+                              fontSize: 10,
+                              // fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          afterSplit[1],
-                          style: TextStyle(
-                            color: Color(0xff565756),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          Text(
+                            afterSplit[1],
+                            style: TextStyle(
+                              // color: Color(0xff565756),
+                              color: Colors.white,
+                              fontSize: 15,
+                              // fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 )
@@ -107,15 +136,22 @@ class _ItemTileState extends State<ItemTile> {
                 onSelected: (value) async {
                   toast(context, "Clicked on $value");
                   if(value == 1){
+                    setState(() {
+                      widget.progressLoading(true);
+                    });
                     var itemKey = widget.dummyData.itemKey;
                     var result = await cancelClass(itemKey, widget.date);
                     if(result == null){
                       setState(() {
                         widget.datasetChanged(true);
+                        widget.progressLoading(false);
                       });
                     }
                     else{
                       print(result);
+                      setState(() {
+                        widget.progressLoading(false);
+                      });
                     }
                   }
                 },

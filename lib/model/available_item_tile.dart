@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/model/available_item.dart';
 import 'package:make_up_class_schedule/utils/constraints.dart';
+import 'package:make_up_class_schedule/utils/custom_dialog.dart';
 
 class AvailableItemTile extends StatefulWidget {
   final AvailableItem dummyData;
@@ -21,7 +22,7 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     print("AVAILABLE ITEM TILE: dummyData = ${widget.dummyData}");
     return Container(
       padding: EdgeInsets.fromLTRB(10,10,0,10),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: Colors.white),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: Color(0xFFF8F8F8)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -34,13 +35,13 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
                 children: [
                   Icon(Icons.access_time_rounded, color: Color(0xFFA6BECB),size: 14,),
                   Text(" " + convertString(widget.dummyData.startTime) + " - " + convertString(widget.dummyData.endTime) +"    ",style: TextStyle(color: Colors.grey)),
-                  Icon(Icons.stacked_bar_chart, color: Color(0xFFA6BECB),size: 14,),
+                  /*Icon(Icons.stacked_bar_chart, color: Color(0xFFA6BECB),size: 14,),
                   Text(
                     " "+widget.dummyData.status.toString(),
                     style: TextStyle(
                         color: statusColorOf(widget.dummyData.status),
                         fontWeight: FontWeight.bold),
-                  )
+                  )*/
                 ],
               )
             ],
@@ -51,16 +52,15 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
                 onSelected: (value) async {
                   toast(context, "Clicked on $value");
                   if(value == 1){
-                    var itemKey = widget.dummyData.itemKey;
-                    var result = await bookClass(itemKey, widget.date);
-                    if(result == null){
-                      setState(() {
-                        widget.datasetChanged(true);
-                      });
-                    }
-                    else{
-                      print(result);
-                    }
+                    showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return CustomDialog(
+                            function: callBackFunction,
+                          );
+                        });
+
                   }
                 },
                 itemBuilder: (context) => [
@@ -81,6 +81,18 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     );
   }
 
+  void callBackFunction(String courseInfo, String sectionInfo) async{
+    var itemKey = widget.dummyData.itemKey;
+    var result = await bookClass(itemKey, widget.date, courseInfo, sectionInfo);
+    if(result == null){
+      setState(() {
+        widget.datasetChanged(true);
+      });
+    }
+    else{
+      print(result);
+    }
+  }
   statusColorOf(String status) {
     if (status == "Another Class")
       return Colors.red;
@@ -112,14 +124,11 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     String retString = "$strHour : $strMinute $amOrPm";
     return retString;
   }
-  Future<String> bookClass(String itemKey, String date) async {
+  Future<String> bookClass(String itemKey, String date, String courseInfo, String sectionInfo) async {
     try{
       DatabaseReference reference = await FirebaseDatabase.instance.reference();
       await reference.child("BookedRooms").child(date).push().set({
         "itemKey" : itemKey,
-        "startTime" : widget.dummyData.startTime,
-        "endTime" : widget.dummyData.endTime,
-        "roomNo" : widget.dummyData.roomNo,
       });
       print("SUCCESSFULLY added in CANCELLED!!");
       await reference.child("MakeupSchedule").child(date).child("AAC").push().set(
@@ -127,6 +136,8 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
             "roomNo" : widget.dummyData.roomNo,
             "startTime" : widget.dummyData.startTime,
             "endTime" : widget.dummyData.endTime,
+            "courseId" : courseInfo,
+            "section" : sectionInfo,
           }
       );
       print("SUCCESSFULLY added in AVAILABLE by DATE!!");
