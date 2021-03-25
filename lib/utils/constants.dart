@@ -13,4 +13,5 @@ class Constants{
   static String sectionCode = 'sectionCode';
   static String batchCode = 'batchCode';
   static String currentPassword = 'currentPassword';
+  static String password = 'password';
 }

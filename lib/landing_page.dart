@@ -10,14 +10,13 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
-  final Future<SharedPreferences> _preference = SharedPreferences.getInstance();
+  SharedPreferences preferences;
 
   bool _isLoggedIn = false;
   bool _isLoading = true;
-  SharedPreferences preferences;
 
   void _getPreference() async {
-    preferences = await _preference;
+    preferences = await SharedPreferences.getInstance();
     _isLoggedIn = preferences.getBool(Constants.isLoggedIn) ?? false;
     _isLoading = false;
   }

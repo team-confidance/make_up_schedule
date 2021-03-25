@@ -137,7 +137,7 @@ class _EditPasswordState extends State<EditPassword> {
                   if(isCurrentPasswordRight){
                     if(changedPassword == changedConfirmPassword){
                       if(changedPassword.length >= 6){
-                        submitToFirebase();
+                        _alertDialogBuilder();
                       }
                       else{
                         showToast("New password is smaller than 6 digits!");
@@ -159,7 +159,7 @@ class _EditPasswordState extends State<EditPassword> {
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                child: Text("Confirm"),
+                child: Text("Change password"),
                 //padding: EdgeInsets.symmetric(horizontal: 80, vertical: 18),
               ),
             ],
@@ -209,12 +209,12 @@ class _EditPasswordState extends State<EditPassword> {
     try {
       DatabaseReference reference = FirebaseDatabase.instance.reference();
       await reference.child("UserInfo").child(widget.firebaseKey).update({
-        Constants.currentPassword: changedPassword,
+        Constants.password: changedPassword,
       });
-      isFirebaseInfoChanged(true);
       SharedPreferences preferences = await SharedPreferences.getInstance();
       await preferences.setString(Constants.currentPassword, changedPassword);
       await widget.sendCallBack();
+      isFirebaseInfoChanged(true);
     } catch (e) {
       print("EXCEPTION : e = $e");
       isFirebaseInfoChanged(false);

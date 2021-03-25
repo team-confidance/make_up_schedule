@@ -6,11 +6,9 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:make_up_class_schedule/create_new_user_screen.dart';
 import 'package:make_up_class_schedule/edit_password.dart';
-import 'package:make_up_class_schedule/edit_phone_number.dart';
 import 'package:make_up_class_schedule/edit_profile_info.dart';
 import 'package:make_up_class_schedule/model/dummy_class_rooms.dart';
 import 'package:make_up_class_schedule/utils/constants.dart';
@@ -201,7 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               visible: _isFilePicked,
             ),
             Visibility(
-              visible: isAdmin,
+              visible: true,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -303,6 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       print("TABLE = $table"); //sheet Name
       print("Max COL = " + excel.tables[table].maxCols.toString());
       print("MAX ROW = " + excel.tables[table].maxRows.toString());
+
       List<String> header = new List.filled(excel.tables[table].maxRows, "");
       Map<int, TimePair> times = {};
       var latestDay = "";

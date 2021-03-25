@@ -191,11 +191,11 @@ class _EditProfileInfoState extends State<EditProfileInfo> {
         Constants.name: changedFullName,
         Constants.designation: changedDesignation,
       });
-      isFirebaseInfoChanged(true);
       SharedPreferences preferences = await SharedPreferences.getInstance();
       await preferences.setString(Constants.designation, changedDesignation);
       await preferences.setString(Constants.name, changedFullName);
       await widget.sendCallBack();
+      isFirebaseInfoChanged(true);
     } catch (e) {
       print("EXCEPTION : e = $e");
       isFirebaseInfoChanged(false);

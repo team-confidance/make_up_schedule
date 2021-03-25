@@ -49,6 +49,7 @@ class _CreateUserState extends State<CreateUser> {
           {
             "email" : _newUserEmail,
             "password" : _newUserPassword,
+            Constants.isAdmin : "false",
           }
       );
       return null;

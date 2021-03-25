@@ -15,7 +15,7 @@ class _CustomDialogState extends State<CustomDialog> {
   String courseTitle = "";
   String section = "";
 
-  void _showToast(String mText){
+  void _showToast(String mText) {
     Fluttertoast.showToast(
         msg: mText,
         toastLength: Toast.LENGTH_SHORT,
@@ -23,8 +23,7 @@ class _CustomDialogState extends State<CustomDialog> {
         timeInSecForIosWeb: 1,
         backgroundColor: Colors.blueAccent,
         textColor: Colors.white,
-        fontSize: 16.0
-    );
+        fontSize: 16.0);
   }
 
   @override
@@ -41,11 +40,24 @@ class _CustomDialogState extends State<CustomDialog> {
         borderRadius: BorderRadius.circular(20.0),
       ),
       child: Padding(
-        padding: EdgeInsets.only(top: 10.0, left: 10.0, right: 10.0),
+        padding: EdgeInsets.only(top: 20.0, left: 30.0, right: 30.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Enter Info",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20.0,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20.0,),
             TextField(
               decoration: InputDecoration(
                 enabledBorder: UnderlineInputBorder(
@@ -56,11 +68,13 @@ class _CustomDialogState extends State<CustomDialog> {
                 hintText: "Course title/code",
               ),
               maxLength: 50,
-              style: TextStyle(fontSize: 24),
+              style: TextStyle(fontSize: 18.0,),
               onChanged: (value) {
                 courseTitle = value;
                 setState(() {
-                  value.isNotEmpty ? isCourseEntered = true : isCourseEntered = false;
+                  value.isNotEmpty
+                      ? isCourseEntered = true
+                      : isCourseEntered = false;
                 });
               },
             ),
@@ -74,11 +88,13 @@ class _CustomDialogState extends State<CustomDialog> {
                 hintText: "Section/batch",
               ),
               maxLength: 50,
-              style: TextStyle(fontSize: 24),
+              style: TextStyle(fontSize: 18.0,),
               onChanged: (value) {
                 section = value;
                 setState(() {
-                  value.isNotEmpty ? isSectionEntered = true : isSectionEntered = false;
+                  value.isNotEmpty
+                      ? isSectionEntered = true
+                      : isSectionEntered = false;
                 });
               },
             ),
@@ -88,25 +104,29 @@ class _CustomDialogState extends State<CustomDialog> {
                 Container(
                   margin: EdgeInsets.only(bottom: 20.0, top: 10.0),
                   child: MaterialButton(
-                    child: Text("Cancel"),
-                    onPressed: (){
-                        Navigator.of(context).pop();
-                        widget.function(courseTitle, section);
-                        print("IN CUSTOM DIALOG: function(false)");
+                    child: Text("CANCEL"),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.function(courseTitle, section);
+                      print("IN CUSTOM DIALOG: function(false)");
                     },
                   ),
                 ),
                 Container(
                   margin: EdgeInsets.only(bottom: 20.0, top: 10.0),
                   child: MaterialButton(
-                    child: Text("Book Class"),
-                    onPressed: (){
-                      if(isCourseEntered && isSectionEntered){
+                    child: Text(
+                      "BOOK CLASS",
+                      style: TextStyle(
+                        color: Colors.blue,
+                      ),
+                    ),
+                    onPressed: () {
+                      if (isCourseEntered && isSectionEntered) {
                         Navigator.of(context).pop();
                         widget.function(courseTitle, section);
                         print("IN CUSTOM DIALOG: function(false)");
-                      }
-                      else{
+                      } else {
                         _showToast("Please fill up all fields!");
                       }
                     },
@@ -117,7 +137,6 @@ class _CustomDialogState extends State<CustomDialog> {
           ],
         ),
       ),
-
     );
   }
 }
