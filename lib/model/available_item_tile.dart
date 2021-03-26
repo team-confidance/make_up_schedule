@@ -1,7 +1,9 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:make_up_class_schedule/model/available_item.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
 import 'package:make_up_class_schedule/utils/constraints.dart';
 import 'package:make_up_class_schedule/utils/custom_dialog.dart';
 
@@ -35,13 +37,13 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
                 children: [
                   Icon(Icons.access_time_rounded, color: Color(0xFFA6BECB),size: 14,),
                   Text(" " + convertString(widget.dummyData.startTime) + " - " + convertString(widget.dummyData.endTime) +"    ",style: TextStyle(color: Colors.grey)),
-                  /*Icon(Icons.stacked_bar_chart, color: Color(0xFFA6BECB),size: 14,),
+                  Icon(Icons.stacked_bar_chart, color: Color(0xFFA6BECB),size: 14,),
                   Text(
                     " "+widget.dummyData.status.toString(),
                     style: TextStyle(
                         color: statusColorOf(widget.dummyData.status),
                         fontWeight: FontWeight.bold),
-                  )*/
+                  )
                 ],
               )
             ],
@@ -52,14 +54,9 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
                 onSelected: (value) async {
                   toast(context, "Clicked on $value");
                   if(value == 1){
-                    showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext context) {
-                          return CustomDialog(
-                            function: callBackFunction,
-                          );
-                        });
+                    widget.dummyData.status == Constants.available
+                   ? showCustomDialog()
+                   : showConfirmDialog();
 
                   }
                 },
@@ -81,6 +78,56 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     );
   }
 
+  void showCustomDialog(){
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return CustomDialog(
+            function: callBackFunction,
+          );
+        });
+  }
+  void showConfirmDialog(){
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context){
+          return AlertDialog(
+            title: Text("Caution!"),
+            content: Container(
+              child: Text("If you take this class, your regular class will be cancelled."),
+            ),
+            actions: [
+              ElevatedButton(
+                child: Text('TAKE THIS'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  afterConfirmDialog();
+                },
+              ),
+              ElevatedButton(
+                child: Text('CANCEL'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          );
+        }
+    );
+  }
+
+  void afterConfirmDialog() async {
+      String result = await cancelClass();
+      if(result != null){
+        _showToast(result);
+      }
+      else{
+        _showToast("Cancellation successful! Now book the class!");
+        showCustomDialog();
+      }
+  }
   void callBackFunction(String courseInfo, String sectionInfo) async{
     var itemKey = widget.dummyData.itemKey;
     var result = await bookClass(itemKey, widget.date, courseInfo, sectionInfo);
@@ -94,9 +141,9 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     }
   }
   statusColorOf(String status) {
-    if (status == "Another Class")
+    if (status == Constants.anotherClass)
       return Colors.red;
-    else if (status == "Available")
+    else if (status == Constants.available)
       return Colors.greenAccent[400];
   }
 
@@ -124,9 +171,10 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     String retString = "$strHour : $strMinute $amOrPm";
     return retString;
   }
+
   Future<String> bookClass(String itemKey, String date, String courseInfo, String sectionInfo) async {
     try{
-      DatabaseReference reference = await FirebaseDatabase.instance.reference();
+      DatabaseReference reference = FirebaseDatabase.instance.reference();
       await reference.child("BookedRooms").child(date).push().set({
         "itemKey" : itemKey,
       });
@@ -145,7 +193,40 @@ class _AvailableItemTileState extends State<AvailableItemTile> {
     }
     catch (e){
       print("ERROR OCCURED in cancelling data!!");
-      return "ERROR OCCURED in cancelling data!!";
+      return "ERROR OCCURED while booking the classroom!";
     }
+  }
+  Future<String> cancelClass() async {
+    _showToast("Cancelling old classroom...");
+    try{
+      DatabaseReference reference = FirebaseDatabase.instance.reference();
+      await reference.child("CancelledSchedule").child(widget.date).child("AAC").push().set({
+        "itemKey" : widget.dummyData.regularItemKeyInThisTime,
+      });
+      print("SUCCESSFULLY added in CANCELLED!!");
+      await reference.child("AvailableRoomsByDate").child(widget.date).push().set(
+          {
+            "roomNo" : widget.dummyData.regularItemRoomInThisTime,
+            "startTime" : widget.dummyData.startTime,
+            "endTime" : widget.dummyData.endTime,
+          }
+      );
+      print("SUCCESSFULLY added in AVAILABLE by DATE!!");
+      return null;
+    }
+    catch (e){
+      print("ERROR OCCURED in cancelling data!!");
+      return "ERROR OCCURED while cancelling old classroom!";
+    }
+  }
+  void _showToast(String mText) {
+    Fluttertoast.showToast(
+        msg: mText,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.blueAccent,
+        textColor: Colors.white,
+        fontSize: 16.0);
   }
 }

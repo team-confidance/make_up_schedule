@@ -14,4 +14,8 @@ class Constants{
   static String batchCode = 'batchCode';
   static String currentPassword = 'currentPassword';
   static String password = 'password';
+  static String anotherClass = 'Another Class';
+  static String available = 'Available';
+  static String regularItemKeyInThisTime = 'regularItemKeyInThisTime';
+  static String regularItemRoomInThisTime = 'regularItemRoomInThisTime';
 }

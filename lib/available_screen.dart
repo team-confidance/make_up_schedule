@@ -2,6 +2,9 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:make_up_class_schedule/model/available_item.dart';
 import 'package:make_up_class_schedule/model/available_item_tile.dart';
+import 'package:make_up_class_schedule/model/schedule_item.dart';
+import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:intl/intl.dart';
 
 class AvailableScreen extends StatefulWidget {
   final String day;
@@ -20,6 +23,17 @@ class _AvailableScreenState extends State<AvailableScreen> {
   DatabaseReference bookedRoomsDb;
   List<AvailableItem> dummyData = [];
 
+  ///For saving normal class info. For informing teacher that
+  ///is there any class in the available room's time
+  DatabaseReference mainScheduleDb;
+  DatabaseReference makeUpScheduleDb;
+  DatabaseReference cancelledScheduleDb;
+  List<ScheduleItem> regularDataList = [];
+
+  Map<String, bool> isTimeInRegularList = {};
+  Map<String, String> timeItemKeyMap = {};
+  Map<String, String> timeRoomNoMap = {};
+
   Future<void> sortData(List<AvailableItem> dummyData) async {
     if (dummyData != null) {
       print("sorting....");
@@ -29,14 +43,117 @@ class _AvailableScreenState extends State<AvailableScreen> {
     }
   }
 
+  Future<void> setRegularDataList(String today, String selectedDate) async {
+    mainScheduleDb = reference.child("MainSchedule");
+    makeUpScheduleDb = reference.child("MakeupSchedule");
+    cancelledScheduleDb = reference.child("CancelledSchedule");
+
+    regularDataList.clear();
+    print("today = $today  selectedDate = $selectedDate");
+    await mainScheduleDb
+        .child(today.toUpperCase())
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
+      var values = snapshot.value;
+      regularDataList.clear();
+      print("VALUES = $values");
+
+      if (values != null) {
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'],
+            endTime: value['endTime'],
+            startTime: value['startTime'],
+            courseId: value['courseId'],
+            batchCode: value['batchCode'],
+            section: value['section'],
+            teacherCode: value['teacherCode'],
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
+          );
+          regularDataList.add(item);
+        });
+        print(".............................FINISHED LOOOP!!!");
+      }
+    });
+
+    today = selectedDate;
+    await makeUpScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
+      var values = snapshot.value;
+      print("VALUES2 = $values");
+
+      if (values != null) {
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          ScheduleItem item = ScheduleItem(
+            roomNo: value['roomNo'],
+            endTime: value['endTime'],
+            startTime: value['startTime'],
+            courseId: value['courseId'],
+            batchCode: value['batchCode'],
+            section: value['section'],
+            teacherCode: value['teacherCode'],
+            itemKey: key,
+            status: value['status'] ?? " ",
+            courseName: value['courseName'] ?? " ",
+          );
+          regularDataList.add(item);
+        });
+        print(".............................FINISHED LOOOP!!!");
+      }
+    });
+
+    await cancelledScheduleDb
+        .child(today)
+        .child("AAC")
+        .once()
+        .then((DataSnapshot snapshot) {
+      var values = snapshot.value;
+      print("VALUES3 = $values");
+      if (values != null) {
+        Map<dynamic, dynamic> valueList = snapshot.value;
+        valueList.forEach((key, value) {
+          var itemKey = value['itemKey'];
+          var item;
+          bool flag = false;
+          for (item in regularDataList) {
+            if (item.itemKey == itemKey) {
+              flag = true;
+              break;
+            }
+          }
+          if (flag) {
+            regularDataList.remove(item);
+          }
+        });
+        print(".............................FINISHED LOOOP!!!");
+      }
+    });
+    for(var item in regularDataList){
+      isTimeInRegularList[item.startTime] = true;
+      timeItemKeyMap[item.startTime] = item.itemKey;
+      timeRoomNoMap[item.startTime] = item.roomNo;
+    }
+  }
+
   Future<void> setUpDummyData() async {
+    var today = widget.day;
+    dayName = widget.day;
+    selectedDate = widget.date;
+
+    await setRegularDataList(today, "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}");
+
     availableRoomsByDayDb = reference.child("AvailableRoomsByDay");
     availableRoomsByDateDb = reference.child("AvailableRoomsByDate");
     bookedRoomsDb = reference.child("BookedRooms");
 
-    var today = widget.day;
-    dayName = widget.day;
-    selectedDate = widget.date;
 
     try {
       await availableRoomsByDayDb
@@ -60,7 +177,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
             dummyData.add(item);
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
 
@@ -86,7 +203,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
             dummyData.add(item);
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
 
@@ -110,13 +227,25 @@ class _AvailableScreenState extends State<AvailableScreen> {
             }
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
       await sortData(dummyData);
     } catch (e) {
       print("ERROR EXCEPTION : e=$e");
     }
+    for(var item in dummyData){
+      if(isTimeInRegularList[item.startTime] == true){
+        item.status = Constants.anotherClass;
+        item.regularItemKeyInThisTime = timeItemKeyMap[item.startTime];
+        item.regularItemRoomInThisTime = timeRoomNoMap[item.startTime];
+      }
+      else{
+        item.status = Constants.available;
+      }
+    }
+    setState(() {
+    });
   }
 
   @override
@@ -147,6 +276,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
     if (picked != null && picked != selectedDate)
       setState(() {
         selectedDate = picked;
+        dayName = DateFormat('EEEE').format(selectedDate);
         // dayName = days[selectedDate.weekday];
         _resetData(dayName, selectedDate);
       });
@@ -162,6 +292,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
   }
 
   Future<void> _resetData(String today, DateTime selectedDate) async {
+    await setRegularDataList(today, "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}");
     dummyData.clear();
     try {
       await availableRoomsByDayDb
@@ -185,7 +316,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
             dummyData.add(item);
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
 
@@ -210,7 +341,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
             dummyData.add(item);
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
 
@@ -234,13 +365,25 @@ class _AvailableScreenState extends State<AvailableScreen> {
             }
           });
           print(".............................FINISHED LOOOP!!!");
-          setState(() {});
+          // setState(() {});
         }
       });
       sortData(dummyData);
     } catch (e) {
       print("ERROR EXCEPTION : e=$e");
     }
+
+    for(var item in dummyData){
+      if(isTimeInRegularList[item.startTime] == true){
+        item.status = Constants.anotherClass;
+        item.regularItemKeyInThisTime = timeItemKeyMap[item.startTime];
+        item.regularItemRoomInThisTime = timeRoomNoMap[item.startTime];
+      }
+      else{
+        item.status = Constants.available;
+      }
+    }
+    setState(() {});
   }
 
   @override

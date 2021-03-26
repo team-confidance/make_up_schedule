@@ -12,6 +12,7 @@ import 'package:make_up_class_schedule/edit_password.dart';
 import 'package:make_up_class_schedule/edit_profile_info.dart';
 import 'package:make_up_class_schedule/model/dummy_class_rooms.dart';
 import 'package:make_up_class_schedule/utils/constants.dart';
+import 'package:make_up_class_schedule/utils/constraints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -232,8 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           var mPath = file.path;
                           var bytes = File(mPath).readAsBytesSync();
                           var excel = Excel.decodeBytes(bytes);
-                          _uploadTableToFirebase(excel);
-
+                          await _uploadTableToFirebase(excel);
+                          _showToast("Routine Uploaded to Firebase!");
 
                           for (var table in excel.tables.keys) {
                             print("TABLE = $table"); //sheet Name
@@ -296,40 +297,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   Future<bool> _uploadTableToFirebase(Excel excel) async {
+    _showToast("Deleting all the Database...");
+    await _deleteCollections();
+    _showToast("Deleted all the collections");
+
     bool isSuccessFul = true;
     for (var table in excel.tables.keys) {
-      print("TABLE = $table"); //sheet Name
+      ///just printing details
+      print("TABLE = $table"); //sheet Nam// e
       print("Max COL = " + excel.tables[table].maxCols.toString());
       print("MAX ROW = " + excel.tables[table].maxRows.toString());
 
-      List<String> header = new List.filled(excel.tables[table].maxRows, "");
+
+      ///Colums header numbers = maximum columns no
+      List<String> header = new List.filled(excel.tables[table].maxCols, "");
+
+      ///mapping the <int, <fromtTime, toTime> >
       Map<int, TimePair> times = {};
+
+
+      ///not every row of the table will have DAY, so we are saving which is the last day we've found
       var latestDay = "";
+
+
+      ///First row of the table have HEADING (like-"section", "batch",...etc.). Is the details of the first row already taken?
       bool alreadyTakenDetails = false;
+
+
+      ///<<first, second>, bool>
       Map<Pair, bool> roomUsedDetails = {};
+
+
+      ///which maximum column has reasonable information to take
       var maxColHasClass = 0;
+
       // Map<String, List<String>> roomUsedDetails = {};
       for (var row in excel.tables[table].rows) {
+        ///just printing info...
         print("...............ROW = $row");
         print("ROW.type = ${row.runtimeType}   ROW.size = ${row.length}");
+
+
         var rowLength = row.length;
+
+        ///we want to kow the Day name of the beforeLatest day
         var beforeLatestDay;
 
+        ///if there is a new day started, row[0] will contain the last day name (like- "Saturday", "Sunday", etc.)
         if(row[0] != null){
           beforeLatestDay = latestDay;
           latestDay = row[0];
           print("latestDay === ${row[0]}");
+
           if(alreadyTakenDetails == false){
             alreadyTakenDetails = true;
             for(int i=1; i<rowLength; i++){
               if(row[i]!=null){
                 String myString = row[i].toString();
                 print("i=$i, myString = $myString, row[i] = ${row[i]}");
-                String withoutEquals = myString.replaceAll(RegExp(' '), '');
-                print("i=$i, withoutEquals = $withoutEquals");
+                String withoutSpaces = myString.replaceAll(RegExp(' '), '');
+                print("i=$i, withoutSpaces = $withoutSpaces");
 
 
-                var splitResult = withoutEquals.split('-');
+                var splitResult = withoutSpaces.split('-');
                 if(splitResult.length > 1){
                   //given a time range
                   var againSplit = splitResult[0].split(":");
@@ -354,7 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   header[i] = "timeRange";
                 }
                 else{
-                  header[i] = withoutEquals;
+                  header[i] = withoutSpaces;
                 }
               }
             }
@@ -477,6 +507,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       print("LOOP FINISHED!!!!!!!");
     }
     return isSuccessFul;
+  }
+
+  Future<void> _deleteCollections() async {
+    DatabaseReference reference = FirebaseDatabase.instance.reference();
+    await reference.child("AvailableRoomsByDay").remove();
+    await reference.child("AvailableRoomsByDate").remove();
+    await reference.child("BookedRooms").remove();
+    await reference.child("MakeupSchedule").remove();
+    await reference.child("MainSchedule").remove();
+    await reference.child("CancelledSchedule").remove();
   }
 }
 

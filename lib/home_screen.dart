@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
 
@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
     await cancelledScheduleDb
@@ -195,10 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
     await sortData(dummyData);
+    setState(() {
+    });
   }
 
   @override
@@ -210,9 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> sortData(List<ScheduleItem> dummyData) async {
     if (dummyData != null) {
       print("sorting....");
-      await dummyData.sort(
+      dummyData.sort(
           (a, b) => int.parse(a.startTime).compareTo(int.parse(b.startTime)));
-      setState(() {});
+      // setState(() {});
     }
   }
 
@@ -265,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
 
@@ -296,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
           dummyData.add(item);
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
     if (dummyData != null) {
@@ -328,10 +330,12 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
         print(".............................FINISHED LOOOP!!!");
-        setState(() {});
+        // setState(() {});
       }
     });
     await sortData(dummyData);
+    setState(() {
+    });
   }
 
   @override

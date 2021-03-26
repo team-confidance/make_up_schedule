@@ -107,7 +107,7 @@ class _CustomDialogState extends State<CustomDialog> {
                     child: Text("CANCEL"),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      widget.function(courseTitle, section);
+                      // widget.function(courseTitle, section);
                       print("IN CUSTOM DIALOG: function(false)");
                     },
                   ),
